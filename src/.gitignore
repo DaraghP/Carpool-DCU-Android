@@ -1,0 +1,8 @@
+carpool-app/.idea/
+carpool-app/backend/.idea
+carpool-app/backend/__pycache__/
+carpool-app/backend/carpool/__pycache__/
+carpool-app/backend/backend/__pycache__/
+carpool-app/backend/carpool/migrations/__pycache__/
+../../.idea/
+../.idea/
