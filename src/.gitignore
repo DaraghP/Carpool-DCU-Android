@@ -4,5 +4,20 @@ carpool-app/backend/__pycache__/
 carpool-app/backend/carpool/__pycache__/
 carpool-app/backend/backend/__pycache__/
 carpool-app/backend/carpool/migrations/__pycache__/
-../../.idea/
 ../.idea/
+
+
+carpool-app/frontend/node_modules/
+carpool-app/frontend/.expo/
+carpool-app/frontend/dist/
+carpool-app/frontend/npm-debug.*
+carpool-app/frontend/*.jks
+carpool-app/frontend/*.p8
+carpool-app/frontend/*.p12
+carpool-app/frontend/*.key
+carpool-app/frontend/*.mobileprovision
+carpool-app/frontend/*.orig.*
+carpool-app/frontend/web-build/
+
+# macOS
+carpool-app/frontend/.DS_Store
