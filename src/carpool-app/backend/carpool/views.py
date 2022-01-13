@@ -39,7 +39,7 @@ def login(request):
             carpool_user = authenticate(username=name, password=password)
             if carpool_user is not None:
                 django_login(request, carpool_user)
-                return Response({"id": carpool_user.id, "username": carpool_user.username, "password": carpool_user.password})
+                return Response({"id": carpool_user.id, "username": carpool_user.username})
             else:
                 return Response("Incorrect username or password")
 
