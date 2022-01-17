@@ -137,5 +137,6 @@ AUTH_USER_MODEL = "carpool.CarpoolUser"
 STATIC_URL = '/static/'
 
 CORS_ORIGIN_WHITELIST = [
-     'http://localhost:3000',
+    'http://localhost:3000',
+    'http://localhost:19006',
 ]
