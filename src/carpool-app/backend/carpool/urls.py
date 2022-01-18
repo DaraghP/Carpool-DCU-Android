@@ -8,6 +8,3 @@ urlpatterns = [
     path("login", views.login, name="login"),
     path("token", obtain_auth_token, name="api-auth-token")
 ]
-
-#
-

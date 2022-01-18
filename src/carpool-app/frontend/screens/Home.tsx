@@ -4,7 +4,7 @@ import {StyleSheet, View, Text} from "react-native";
 function HomeScreen({ navigation }) {
   return (
       <View style={styles.container}>
-        <Text> Successfully logged in </Text>
+        <Text> Successfully logged in as: __</Text>
       </View>
   )
 }

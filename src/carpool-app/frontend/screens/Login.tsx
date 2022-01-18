@@ -1,28 +1,27 @@
 import {StyleSheet, View} from "react-native";
 import {Box, Button, Center, FormControl, Input, Heading} from "native-base";
-import {useEffect, useRef, useState} from "react";
+import {useContext, useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
-const {manifest} = Constants;
+import {GlobalContext} from "../Contexts";
 
 function LoginScreen({ navigation }) {
+  const backendURL = useContext(GlobalContext).backendURL;
+
   const usernameInput = useRef("");
   const passwordInput = useRef("");
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
-  const ip = manifest.debuggerHost.split(":")[0];
-  const url = `http://${ip}:8000`;
-
 
   const login = () => {
     let response = null;
     let token = null;
 
-    fetch(`${url}/token`, {
+    fetch(`${backendURL}/token`, {
       method: "POST",
       headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          // Might need 'Authorization' here
       },
       body: JSON.stringify({username: usernameText, password: passwordText})
     }).then(response => response.json())

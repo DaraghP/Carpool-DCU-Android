@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login as django_login
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -19,13 +20,21 @@ def index(request):
 @api_view(["POST"])
 def register(request):
     if request.method == "POST":
-        carpool_user = CarpoolUserSerializer(data=request.data)
+        is_registration_correct = CarpoolUserSerializer.check_registration_data(data=request.data)
+        if is_registration_correct is True:
+            carpool_user = CarpoolUserSerializer(data=request.data)
+            if carpool_user.is_valid():
+                temp_user = carpool_user.create(request.data)
+                token = Token.objects.create(user=temp_user)
 
-        if carpool_user.is_valid():
-            carpool_user.create(request.data)
-            return Response(carpool_user.data, status=status.HTTP_201_CREATED)
+                user_data = {"username": temp_user.username, "token": token.key}
 
-        return Response({"error": "could not register user."})
+                django_login(request, temp_user)
+
+                return Response(user_data, status=status.HTTP_201_CREATED)
+            return Response({"error": "could not register user."})
+        else:
+            return Response({"error": is_registration_correct})
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
