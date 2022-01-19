@@ -6,20 +6,24 @@ import LoginScreen from './screens/Login';
 import RegisterScreen from './screens/Register';
 import HomeScreen from './screens/Home';
 import { GlobalContext } from './Contexts';
-import {useState} from "react";
+import {useState, useEffect, useMemo, useCallback} from "react";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [globals, updateGlobals] = useState({backendURL: "http://da87-46-7-17-96.ngrok.io"})
+  const [globals, updateGlobals] = useState({backendURL: "http://448b-2001-bb6-6792-1a00-41f9-a8e9-7047-b59f.ngrok.io", username: "", token: ""})
 
-  const changeGlobals = (object) => {
-    updateGlobals({...globals, ...object});
-    console.log("test", globals)
-  };
+  const changeGlobals = useCallback((object) => {
+    updateGlobals({...globals, ...object})
+  }, []);
+
+  const memoGlobals = useMemo(() => ({
+    globals,
+    changeGlobals
+  }), [globals, changeGlobals])
 
   return (
-    <GlobalContext.Provider value={{globals, changeGlobals}}>
+    <GlobalContext.Provider value={memoGlobals}>
       <NativeBaseProvider>
         <NavigationContainer>
           <Stack.Navigator initialRouteName="Login">

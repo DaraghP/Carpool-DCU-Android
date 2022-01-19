@@ -1,21 +1,22 @@
 import {StyleSheet, View} from "react-native";
 import {Box, Button, Center, FormControl, Input, Heading} from "native-base";
-import {useContext, useRef, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {GlobalContext} from "../Contexts";
 
+
 function LoginScreen({ navigation }) {
-  const backendURL = useContext(GlobalContext).backendURL;
+  const {globals, changeGlobals} = useContext(GlobalContext);
+  const backendURL = globals.backendURL;
 
   const usernameInput = useRef("");
   const passwordInput = useRef("");
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
+  const [errorFound, setErrorFound] = useState(false);
+
 
   const login = () => {
-    let response = null;
-    let token = null;
-
     fetch(`${backendURL}/token`, {
       method: "POST",
       headers: {
@@ -31,14 +32,21 @@ function LoginScreen({ navigation }) {
             passwordInput.current.clear();
 
             await AsyncStorage.setItem("token", res.token);
-            token = await AsyncStorage.getItem("token");
-            console.log(token); //
-            response = res; //
+            await AsyncStorage.getItem("token");
+
+            changeGlobals({username: usernameText, token: res.token});
+
+            navigation.navigate("Home");
         }
         else {
+
             // TODO: display some warning
-        }
-    }).catch((e) => {console.error(e)})//
+            console.log("Incorrect Username or Password");
+        } //
+    }).catch((e) => {
+        console.error(e)
+        console.log("Incorrect Username or Password")
+    })//
 
     //     .then(() => {
     //     if (response) {
@@ -59,19 +67,25 @@ function LoginScreen({ navigation }) {
             <Heading size="md" mb="3">Login</Heading>
 
             <Box>
-                <FormControl.Label>Username</FormControl.Label>
-                <Input mb="5" placeholder="Username" ref={usernameInput} onChangeText={(text: string) => {setUsernameText(text)}}/>
 
-                <FormControl.Label>Password</FormControl.Label>
-                <Input placeholder="Password" ref={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
+                <FormControl isInvalid={errorFound}>
+                    <FormControl.Label isRequired>Username</FormControl.Label>
+                    <Input key={1} mb="5" placeholder="Username" ref={usernameInput} onChangeText={(text: string) => {setUsernameText(text)}}/>
+                </FormControl>
 
-                <Button mt="5" onPress={() => {login()}}>
-                    Login
-                </Button>
+                <FormControl>
+                    <FormControl.Label isRequired>Password</FormControl.Label>
 
-                <Button variant="subtle" colorScheme="tertiary" mt="3" onPress={() => navigation.navigate("Register")}>
-                    Don't have an account?
-                </Button>
+                        <Input key={2} type="password" placeholder="Password" ref={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
+                </FormControl>
+                    <Button mt="5" onPress={() => {login()}}>
+                        Login
+                    </Button>
+
+                    <Button variant="subtle" colorScheme="tertiary" mt="3" onPress={() => navigation.navigate("Register")}>
+                        Don't have an account?
+                    </Button>
+
             </Box>
         </Center>
       </View>

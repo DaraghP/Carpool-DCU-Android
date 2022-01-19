@@ -1,6 +1,6 @@
 import {StyleSheet, Text, View} from "react-native";
 import {Box, Button, Center, FormControl, Heading, Input} from "native-base";
-import {useContext, useRef, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import {GlobalContext} from "../Contexts";
 
 function RegisterScreen({ navigation }) {
@@ -14,7 +14,6 @@ function RegisterScreen({ navigation }) {
   const [passwordText, setPasswordText] = useState("");
   const [reEnteredPasswordText, setReEnteredPasswordText] = useState("");
 
-  console.log(backendURL)
   const register = () => {
       fetch(`${backendURL}/register`, {
       method: "POST",
@@ -26,9 +25,8 @@ function RegisterScreen({ navigation }) {
       body: JSON.stringify({username: usernameText, password: passwordText, reEnteredPassword: reEnteredPasswordText})
     }).then(response => response.json())
     .then((res) => {
-        changeGlobals(res);
-        console.log(globals);
         if (!("error" in res)) {
+            changeGlobals(res);
             navigation.navigate("Home");
         }
     });

@@ -1,10 +1,15 @@
 import {StyleSheet, View, Text} from "react-native";
+import {useContext} from "react";
+import {GlobalContext} from "../Contexts";
 
 
 function HomeScreen({ navigation }) {
+  const {globals, changeGlobals} = useContext(GlobalContext);
+  const username = globals.username;
+
   return (
       <View style={styles.container}>
-        <Text> Successfully logged in as: __</Text>
+        <Text> Successfully logged in as: {username}</Text>
       </View>
   )
 }
