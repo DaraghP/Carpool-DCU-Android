@@ -1,5 +1,5 @@
 import {StyleSheet, Text, View} from "react-native";
-import {Box, Button, Center, FormControl, Heading, Input} from "native-base";
+import {Box, Stack, Button, Center, FormControl, Heading, Input} from "native-base";
 import {useContext, useEffect, useRef, useState} from "react";
 import {GlobalContext} from "../Contexts";
 
@@ -13,6 +13,8 @@ function RegisterScreen({ navigation }) {
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
   const [reEnteredPasswordText, setReEnteredPasswordText] = useState("");
+  const [errorType, setErrorType] = useState("");
+  const [errorText, setErrorText] = useState("");
 
   const register = () => {
       fetch(`${backendURL}/register`, {
@@ -25,37 +27,52 @@ function RegisterScreen({ navigation }) {
       body: JSON.stringify({username: usernameText, password: passwordText, reEnteredPassword: reEnteredPasswordText})
     }).then(response => response.json())
     .then((res) => {
-        if (!("error" in res)) {
+        if (!("errorType" in res)) {
             changeGlobals(res);
+            setErrorType("");
+            setErrorText("");
             navigation.navigate("Home");
+        }
+        else {
+            setErrorType(res.errorType);
+            setErrorText(res.errorMessage);
         }
     });
   };
 
   return (
       <View style={styles.container}>
-        <Center>
-            <Heading size="md" mb="3">Register</Heading>
+          <Stack direction="column" width="250">
+                <Center>
+                    <Heading size="md" mb="3">Register</Heading>
 
-            <Box>
-                <FormControl.Label>Username</FormControl.Label>
-                <Input mb="5" placeholder="Username" ref={usernameInput} onChangeText={(text: string) => {setUsernameText(text)}}/>
+                    <FormControl isInvalid={errorType === "username"}>
+                        <FormControl.Label>Username</FormControl.Label>
+                        <Input placeholder="Username" ref={usernameInput} onChangeText={(text: string) => {setUsernameText(text)}}/>
+                        <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
+                    </FormControl>
 
-                <FormControl.Label>Password</FormControl.Label>
-                <Input placeholder="Password" ref={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
+                    <FormControl isInvalid={errorType === "password" || errorType === "non_matching_passwords"}>
+                        <FormControl.Label mt="5">Password</FormControl.Label>
+                        <Input type="password" placeholder="Password" ref={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
+                        <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
+                    </FormControl>
 
-                <FormControl.Label>Re-enter password</FormControl.Label>
-                <Input placeholder="Password" ref={reEnterPasswordInput} onChangeText={(text: string) => {setReEnteredPasswordText(text)}}/>
+                    <FormControl isInvalid={errorType === "non_matching_passwords"}>
+                        <FormControl.Label mt="5">Re-enter password</FormControl.Label>
+                        <Input type="password" placeholder="Password" ref={reEnterPasswordInput} onChangeText={(text: string) => {setReEnteredPasswordText(text)}}/>
+                        <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
+                    </FormControl>
 
-                <Button mt="5" onPress={() => {register()}}>
-                    Register
-                </Button>
+                    <Button mt="5" width="100%" onPress={() => {register()}}>
+                        Register
+                    </Button>
 
-                <Button variant="subtle" colorScheme="tertiary" mt="3" onPress={() => navigation.navigate("Login")}>
-                    Already have an account?
-                </Button>
-            </Box>
-        </Center>
+                    <Button width="100%" variant="subtle" colorScheme="tertiary" mt="3" onPress={() => navigation.navigate("Login")}>
+                        Already have an account?
+                    </Button>
+                </Center>
+          </Stack>
       </View>
   )
 }
