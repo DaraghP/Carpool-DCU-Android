@@ -15,6 +15,9 @@ function LoginScreen({ navigation }) {
   const [passwordText, setPasswordText] = useState("");
   const [errorFound, setErrorFound] = useState(false);
 
+  useEffect(() => {
+      console.log(globals)
+  }, [globals])
 
   const login = () => {
     fetch(`${backendURL}/login`, {
@@ -32,12 +35,13 @@ function LoginScreen({ navigation }) {
             passwordInput.current.clear();
 
             await AsyncStorage.setItem("token", res.token);
-            await AsyncStorage.getItem("token");
-
+            await AsyncStorage.getItem("token"); //
+            //
+            // navigates to home screen once globals.user.token updates
             changeGlobals({username: usernameText, token: res.token});
 
             setErrorFound(false);
-            navigation.navigate("Home");
+
         }
         else {
             setErrorFound(true);

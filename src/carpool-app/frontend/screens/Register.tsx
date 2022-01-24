@@ -4,6 +4,7 @@ import {useContext, useEffect, useRef, useState} from "react";
 import {GlobalContext} from "../Contexts";
 
 function RegisterScreen({ navigation }) {
+  const mounted = useRef(true);
   const {globals, changeGlobals} = useContext(GlobalContext);
   const backendURL = globals.backendURL;
 
@@ -16,27 +17,47 @@ function RegisterScreen({ navigation }) {
   const [errorType, setErrorType] = useState("");
   const [errorText, setErrorText] = useState("");
 
+
+  useEffect(() => {
+      return () => {
+          mounted.current = false;
+      }
+  }, [])
+
+  useEffect(() => {
+      console.log("Globals", globals);
+  }, [globals])
+
   const register = () => {
       fetch(`${backendURL}/register`, {
       method: "POST",
       headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          // Might need 'Authorization' here
       },
       body: JSON.stringify({username: usernameText, password: passwordText, reEnteredPassword: reEnteredPasswordText})
     }).then(response => response.json())
     .then((res) => {
         if (!("errorType" in res)) {
-            changeGlobals(res);
+            usernameInput.current.clear();
+            passwordInput.current.clear();
+            reEnterPasswordInput.current.clear();
+
+            // prevents memory leak
+            if (mounted.current) {
+                changeGlobals({username: res.username, token: res.token});
+            }
+
             setErrorType("");
             setErrorText("");
-            navigation.navigate("Home");
+
         }
         else {
             setErrorType(res.errorType);
             setErrorText(res.errorMessage);
         }
+    }).catch((e) => {
+        console.error(e);
     });
   };
 

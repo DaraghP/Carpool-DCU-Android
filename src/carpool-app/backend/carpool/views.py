@@ -61,3 +61,10 @@ def login(request):
 def logout(request):
     request.user.auth_token.delete()
     return Response(status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    request.user.delete()
+    return Response(status=status.HTTP_200_OK)

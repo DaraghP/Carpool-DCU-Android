@@ -9,7 +9,7 @@ function HomeScreen({ navigation }) {
 
   return (
       <View style={styles.container}>
-        <Text> Successfully logged in as: {username}</Text>
+        <Text>Successfully logged in as: {username}</Text>
       </View>
   )
 }
