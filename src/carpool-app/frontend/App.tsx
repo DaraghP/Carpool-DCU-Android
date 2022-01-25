@@ -11,24 +11,22 @@ import { GlobalContext } from './Contexts';
 import {useState, useEffect, useMemo, useCallback} from "react";
 import Ionicons from '@expo/vector-icons/Ionicons'
 
-
-// const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [globals, updateGlobals] = useState({backendURL: "http://9361-2001-bb6-6792-1a00-90b2-f7b2-8243-61ce.ngrok.io", username: "", token: ""})
+  const [globals, updateGlobals] = useState({backendURL: "http://ae9e-46-7-17-96.ngrok.io", username: "", token: "", startingLocation: "", destination: ""})
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
 
   const changeGlobals = useCallback((object) => {
     updateGlobals({...globals, ...object})
   }, []);
-//
+
   const memoGlobals = useMemo(() => ({
     globals,
     changeGlobals
   }), [globals, changeGlobals])
 
-  useEffect(() => {//
+  useEffect(() => {
     if (globals.token !== "") {
       setHideAuthTabs(true);
     }
@@ -41,7 +39,6 @@ export default function App() {
     <GlobalContext.Provider value={memoGlobals}>
       <NativeBaseProvider>
         <NavigationContainer>
-
           <Tab.Navigator>
             {hideAuthTabs ?
                 <>

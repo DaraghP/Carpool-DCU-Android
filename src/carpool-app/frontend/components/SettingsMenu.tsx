@@ -29,12 +29,11 @@ function SettingsMenu({ navigation }) {
           });
     }
 
-
     return (
         <View style={styles.container}>
             <ScrollView my="5">
                 <Heading mt="5" ml="2" mb="2">
-                    <Text style={{fontWeight: 800, letterSpacing: 2}}>{username}</Text>
+                    <Text style={{fontWeight: "800", letterSpacing: 2}}>{username}</Text>
                     <Button colorScheme="secondary" onPress={() => {logout()}}>Logout</Button>
                 </Heading>
 

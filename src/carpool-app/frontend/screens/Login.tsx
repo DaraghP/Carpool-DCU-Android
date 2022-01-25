@@ -4,7 +4,6 @@ import {useContext, useEffect, useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {GlobalContext} from "../Contexts";
 
-
 function LoginScreen({ navigation }) {
   const {globals, changeGlobals} = useContext(GlobalContext);
   const backendURL = globals.backendURL;
@@ -15,17 +14,12 @@ function LoginScreen({ navigation }) {
   const [passwordText, setPasswordText] = useState("");
   const [errorFound, setErrorFound] = useState(false);
 
-  useEffect(() => {
-      console.log(globals)
-  }, [globals])
-
   const login = () => {
     fetch(`${backendURL}/login`, {
       method: "POST",
       headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          // Might need 'Authorization' here
       },
       body: JSON.stringify({username: usernameText, password: passwordText})
     }).then(response => response.json())
@@ -35,8 +29,8 @@ function LoginScreen({ navigation }) {
             passwordInput.current.clear();
 
             await AsyncStorage.setItem("token", res.token);
-            await AsyncStorage.getItem("token"); //
-            //
+            await AsyncStorage.getItem("token");
+
             // navigates to home screen once globals.user.token updates
             changeGlobals({username: usernameText, token: res.token});
 
