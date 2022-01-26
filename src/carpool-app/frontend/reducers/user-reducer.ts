@@ -1,10 +1,10 @@
 import {createAction, createSlice} from "@reduxjs/toolkit";
 
-
 const initialState = {
     username: "",
     token: "",
     startingLocation: "",
+    destinationLocation: "",
     destination: ""
 }
 

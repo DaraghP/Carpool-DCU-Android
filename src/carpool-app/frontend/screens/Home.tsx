@@ -1,10 +1,13 @@
-import {StyleSheet, View, Text, SafeAreaView} from "react-native";
+import {StyleSheet, View, Text, SafeAreaView, TouchableOpacity} from "react-native";
 import {useEffect, useRef, useState} from "react";
 import {GOOGLE_API_KEY} from "@env";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import MapView, { Marker } from "react-native-maps";
+import MapViewDirections from "react-native-maps-directions";
 import {updateUserState} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
+import Ionicons from '@expo/vector-icons/Ionicons'
+import {Center} from "native-base";
 
 function HomeScreen({ navigation }) {
   const dispatch = useAppDispatch();
@@ -16,16 +19,32 @@ function HomeScreen({ navigation }) {
   const [destLat, setDestLat] = useState(0);
   const [destLng, setDestLng] = useState(0);
   const mapRef = useRef(null);
+  const startMarkerRef = useRef<GooglePlacesAutocomplete>(null);
+  const destMarkerRef = useRef<GooglePlacesAutocomplete>(null);
+
 
   useEffect(() => {
-      mapRef.current.fitToCoordinates(["marker"])
-  }, [startLat, startLng])
+      if (mapRef.current) {
+          setTimeout(() => {
+              mapRef.current.fitToSuppliedMarkers(["start", "destination"], {animated: true});
+          }, 100)
+      }
+  }, [startLat, startLng, destLat, destLng])
 
   return (
       <View style={styles.container}>
           <GooglePlacesAutocomplete
+            ref={startMarkerRef}
             placeholder="Enter a starting location..."
-            styles={{container:{flex: 0}, textInput:{fontSize: 20}}}
+            listViewDisplayed={startMarkerRef.current?.getAddressText() !== ""}
+            renderRightButton={() =>
+                <TouchableOpacity onPress={() => {startMarkerRef.current?.setAddressText("")}}>
+                    <Center>
+                        <Ionicons style={{marginRight: 5}} name="close-circle-outline" size={25}/>
+                    </Center>
+                </TouchableOpacity>
+            }
+            styles={{container: {flex: 0}, textInput: {fontSize: 20}}}
             query={{
                 key: GOOGLE_API_KEY,
                 language: "en",
@@ -45,12 +64,21 @@ function HomeScreen({ navigation }) {
             fetchDetails={true}
           />
 
-          <GooglePlacesAutocomplete
+          <GooglePlacesAutocomplete //
+                ref={destMarkerRef}
                 placeholder="Enter your destination..."
-                styles={{container:{flex: 0}, textInput:{fontSize: 20}}}
+                listViewDisplayed={destMarkerRef.current?.getAddressText() !== ""}
+                renderRightButton={() =>
+                    <TouchableOpacity onPress={() => {destMarkerRef.current?.setAddressText("")}}>
+                        <Center>
+                            <Ionicons style={{marginRight: 5}} name="close-circle-outline" size={25}/>
+                        </Center>
+                    </TouchableOpacity>//
+                }
+                styles={{container:{flex: 0}, textInput:{fontSize: 20, color:"red"}}}//
                 query={{
-                    key: GOOGLE_API_KEY,
-                    language: "en",
+                    key: GOOGLE_API_KEY, //
+                    language: "en", // 
                     components: "country:ie"
                 }}
                 nearbyPlacesAPI="GooglePlacesSearch"
@@ -62,23 +90,35 @@ function HomeScreen({ navigation }) {
                     setDestLat(details.geometry.location.lat);
                     setDestLng(details.geometry.location.lng);
                     setIsDestLocationEntered(true);
-                    dispatch(updateUserState({startingLocation: {address: data.description, coords: details.geometry.location}}))
+                    dispatch(updateUserState({destinationLocation: {address: data.description, coords: details.geometry.location}}))
                 }}
                 fetchDetails={true}
               />
 
               <MapView
-                ref={mapRef}
-                style={{flex: 1}}
-                region={{
+                 ref={mapRef}
+                 style={{flex: 1}}
+                 region={{
                     latitude: startLat,
                     longitude: startLng,
                     latitudeDelta: isStartLocationEntered ? 0.01 : 4.50,
                     longitudeDelta: isStartLocationEntered ? 0.01 : 4.50,
-               }}
+                 }}
               >
+
+                  {isStartLocationEntered && isDestLocationEntered && (
+                      <MapViewDirections
+                          origin={user.startingLocation.address}
+                          destination={user.destinationLocation.address}
+                          apikey={GOOGLE_API_KEY}
+                          strokeWidth={3}
+                          strokeColor="black"
+                      />
+                  )}
+
                   {isStartLocationEntered && (
                       <Marker
+                        key="start"
                         coordinate={{
                             latitude: startLat,
                             longitude: startLng,
@@ -88,6 +128,21 @@ function HomeScreen({ navigation }) {
                         identifier="start"
                       />
                   )}
+
+                  {isDestLocationEntered && (
+                      <Marker
+                        key="destination"
+                        coordinate={{
+                            latitude: destLat,
+                            longitude: destLng,
+                        }}
+                        title="Destination Point"
+                        description={user.destinationLocation.address}
+                        identifier="destination"
+                      />
+                  )}
+
+
               </MapView>
       </View>
   )

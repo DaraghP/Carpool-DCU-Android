@@ -1,11 +1,12 @@
 import {StyleSheet, Text, View} from "react-native";
 import {Stack, Button, Center, FormControl, Heading, Input} from "native-base";
-import {useRef, useState} from "react";
+import {useRef, useEffect, useState} from "react";
 import {updateUserState} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
 
 function RegisterScreen({ navigation }) {
   const dispatch = useAppDispatch();
+  const mounted = useRef(true);
   const user = useAppSelector(state => state.user);
   const backendURL = useAppSelector(state => state.globals.backendURL);
 
@@ -17,6 +18,12 @@ function RegisterScreen({ navigation }) {
   const [reEnteredPasswordText, setReEnteredPasswordText] = useState("");
   const [errorType, setErrorType] = useState("");
   const [errorText, setErrorText] = useState("");
+
+  useEffect(() => {
+    return () => {
+        mounted.current = false;
+    }
+  }, [])
 
   const register = () => {
       fetch(`${backendURL}/register`, {
@@ -33,7 +40,10 @@ function RegisterScreen({ navigation }) {
             passwordInput.current.clear();
             reEnterPasswordInput.current.clear();
 
-            dispatch(updateUserState({username: res.username, token: res.token}));
+            // prevents memory leak
+            if (mounted.current) {
+                dispatch(updateUserState({username: res.username, token: res.token}));
+            }
 
             setErrorType("");
             setErrorText("");
