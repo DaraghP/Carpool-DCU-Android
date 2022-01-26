@@ -1,11 +1,12 @@
 import {Alert, View} from "react-native"
 import {Text, Button} from "native-base";
-import {useContext, useState} from "react";
-import {GlobalContext} from "../Contexts";
+import {updateUserState} from "../reducers/user-reducer";
+import {useAppDispatch, useAppSelector} from "../hooks";
 
 function AccountScreen({ navigation }) {
-    const {globals, changeGlobals} = useContext(GlobalContext);
-    let backendURL = globals.backendURL;
+    const dispatch = useAppDispatch();
+    const user = useAppSelector(state => state.user);
+    const backendURL = useAppSelector(state => state.globals.backendURL);
 
     const delete_alert = () => {
         Alert.alert(
@@ -33,14 +34,14 @@ function AccountScreen({ navigation }) {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `Token ${globals.token}`
+                'Authorization': `Token ${user.token}`
             },//
             body: null
         }).then(response => ({ status: response.status }))
           .then((data) => {
             if (data.status === 200) {
                 // navigates back to Login screen once token is an empty string (see App.tsx)
-                changeGlobals({username: "", token: ""});
+                dispatch(updateUserState({username: "", token: ""}));
             }
           }).catch((e) => {
               console.error(e);

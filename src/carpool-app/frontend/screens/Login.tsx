@@ -1,13 +1,14 @@
 import {StyleSheet, View, Alert} from "react-native";
 import {Box, VStack, Button, Center, FormControl, Input, Heading, Stack} from "native-base";
-import {useContext, useEffect, useRef, useState} from "react";
+import {useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {GlobalContext} from "../Contexts";
+import {updateUserState} from "../reducers/user-reducer";
+import {useAppDispatch, useAppSelector} from "../hooks";
 
 function LoginScreen({ navigation }) {
-  const {globals, changeGlobals} = useContext(GlobalContext);
-  const backendURL = globals.backendURL;
-
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(state => state.user);
+  const backendURL = useAppSelector(state => state.globals.backendURL);
   const usernameInput = useRef("");
   const passwordInput = useRef("");
   const [usernameText, setUsernameText] = useState("");
@@ -15,6 +16,11 @@ function LoginScreen({ navigation }) {
   const [errorFound, setErrorFound] = useState(false);
 
   const login = () => {
+    if (usernameText === "" || passwordText === "") {
+        setErrorFound(true);
+        return;
+    }
+
     fetch(`${backendURL}/login`, {
       method: "POST",
       headers: {
@@ -32,10 +38,9 @@ function LoginScreen({ navigation }) {
             await AsyncStorage.getItem("token");
 
             // navigates to home screen once globals.user.token updates
-            changeGlobals({username: usernameText, token: res.token});
+            dispatch(updateUserState({username: usernameText, token: res.token}));
 
             setErrorFound(false);
-
         }
         else {
             setErrorFound(true);

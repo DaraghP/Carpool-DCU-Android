@@ -1,13 +1,14 @@
 import {StyleSheet, View, Text, SafeAreaView} from "react-native";
-import {useContext, useEffect, useRef, useState} from "react";
-import {GlobalContext} from "../Contexts";
+import {useEffect, useRef, useState} from "react";
 import {GOOGLE_API_KEY} from "@env";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import MapView, { Marker } from "react-native-maps";
+import {updateUserState} from "../reducers/user-reducer";
+import {useAppDispatch, useAppSelector} from "../hooks";
 
 function HomeScreen({ navigation }) {
-  const {globals, changeGlobals} = useContext(GlobalContext);
-  const username = globals.username;
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(state => state.user);
   const [isStartLocationEntered, setIsStartLocationEntered] = useState(false);
   const [isDestLocationEntered, setIsDestLocationEntered] = useState(false);
   const [startLat, setStartLat] = useState(53.1424);
@@ -39,7 +40,7 @@ function HomeScreen({ navigation }) {
                 setStartLat(details.geometry.location.lat);
                 setStartLng(details.geometry.location.lng);
                 setIsStartLocationEntered(true);
-                changeGlobals({...globals, startingLocation: {address: data.description, coords: details.geometry.location}});
+                dispatch(updateUserState({startingLocation: {address: data.description, coords: details.geometry.location}}))
             }}
             fetchDetails={true}
           />
@@ -61,7 +62,7 @@ function HomeScreen({ navigation }) {
                     setDestLat(details.geometry.location.lat);
                     setDestLng(details.geometry.location.lng);
                     setIsDestLocationEntered(true);
-                    changeGlobals({...globals, destination: {address: data.description, coords: details.geometry.location}});
+                    dispatch(updateUserState({startingLocation: {address: data.description, coords: details.geometry.location}}))
                 }}
                 fetchDetails={true}
               />
@@ -83,7 +84,7 @@ function HomeScreen({ navigation }) {
                             longitude: startLng,
                         }}
                         title="Starting Point"
-                        description={globals.startingLocation.address}
+                        description={user.startingLocation.address}
                         identifier="start"
                       />
                   )}

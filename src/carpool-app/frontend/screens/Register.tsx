@@ -1,12 +1,13 @@
 import {StyleSheet, Text, View} from "react-native";
-import {Box, Stack, Button, Center, FormControl, Heading, Input} from "native-base";
-import {useContext, useEffect, useRef, useState} from "react";
-import {GlobalContext} from "../Contexts";
+import {Stack, Button, Center, FormControl, Heading, Input} from "native-base";
+import {useRef, useState} from "react";
+import {updateUserState} from "../reducers/user-reducer";
+import {useAppDispatch, useAppSelector} from "../hooks";
 
 function RegisterScreen({ navigation }) {
-  const mounted = useRef(true);
-  const {globals, changeGlobals} = useContext(GlobalContext);
-  const backendURL = globals.backendURL;
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(state => state.user);
+  const backendURL = useAppSelector(state => state.globals.backendURL);
 
   const usernameInput = useRef("");
   const passwordInput = useRef("");
@@ -16,17 +17,6 @@ function RegisterScreen({ navigation }) {
   const [reEnteredPasswordText, setReEnteredPasswordText] = useState("");
   const [errorType, setErrorType] = useState("");
   const [errorText, setErrorText] = useState("");
-
-
-  useEffect(() => {
-      return () => {
-          mounted.current = false;
-      }
-  }, [])
-
-  useEffect(() => {
-      console.log("Globals", globals);
-  }, [globals])
 
   const register = () => {
       fetch(`${backendURL}/register`, {
@@ -43,10 +33,7 @@ function RegisterScreen({ navigation }) {
             passwordInput.current.clear();
             reEnterPasswordInput.current.clear();
 
-            // prevents memory leak
-            if (mounted.current) {
-                changeGlobals({username: res.username, token: res.token});
-            }
+            dispatch(updateUserState({username: res.username, token: res.token}));
 
             setErrorType("");
             setErrorText("");

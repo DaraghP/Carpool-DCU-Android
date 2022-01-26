@@ -1,13 +1,12 @@
-import {useContext} from "react";
-import {GlobalContext} from "../Contexts";
 import {StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import {Button, Divider, Heading, ScrollView} from "native-base";
-
+import {updateUserState} from "../reducers/user-reducer";
+import {useAppDispatch, useAppSelector} from "../hooks";
 
 function SettingsMenu({ navigation }) {
-    const {globals, changeGlobals} = useContext(GlobalContext);
-    let backendURL = globals.backendURL;
-    let username = globals.username;
+    const dispatch = useAppDispatch();
+    let backendURL = useAppSelector(state => state.globals.backendURL);
+    const user = useAppSelector(state => state.user);
 
     const logout = () => {
         fetch(`${backendURL}/logout`, {
@@ -15,14 +14,14 @@ function SettingsMenu({ navigation }) {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `Token ${globals.token}`
+                'Authorization': `Token ${user.token}`
             },
             body: null
         }).then(response => ({ status: response.status }))
           .then((data) => {
             if (data.status === 200) {
                 // navigates back to Login screen once token is an empty string (see App.tsx)
-                changeGlobals({username: "", token: ""});
+                dispatch(updateUserState({username: "", token: ""}));
             }
           }).catch((e) => {
               console.error(e);
@@ -33,7 +32,7 @@ function SettingsMenu({ navigation }) {
         <View style={styles.container}>
             <ScrollView my="5">
                 <Heading mt="5" ml="2" mb="2">
-                    <Text style={{fontWeight: "800", letterSpacing: 2}}>{username}</Text>
+                    <Text style={{fontWeight: "800", letterSpacing: 2}}>{user.username}</Text>
                     <Button colorScheme="secondary" onPress={() => {logout()}}>Logout</Button>
                 </Heading>
 
