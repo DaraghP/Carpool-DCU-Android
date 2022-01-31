@@ -14,10 +14,11 @@ export const createLocationObj = (key: string, type: string, typeTitle: string, 
     const user = useAppSelector(state => state.user);
     
     const id = type === "waypoint" ? key : type;
-    return (//
-        {// 
+    return (
+        {
              key: key,
              type: type,
+             markerTitle: typeTitle,
              info: {
                 coords: coords,
                 isEntered: false
