@@ -15,6 +15,9 @@ function HomeScreen({ navigation }) {
     const user = useAppSelector(state => state.user);
     const mapRef = useRef(null);
 
+    const [distance, setDistance] = useState("");
+    const [duration, setDuration] = useState("");
+
     const increaseWaypoints = () => {
         let activeWaypoints = Object.keys(user.locations).filter((key) => user.locations[key].marker.description && user.locations[key].type === "waypoint" && user.locations[key].info.isEntered)
                                 .map((key) => user.locations[key].marker.description);
@@ -39,12 +42,12 @@ function HomeScreen({ navigation }) {
                             .map((key) => user.locations[key].marker.description);
 
                 let markers = Object.keys(user.locations).map((key) => user.locations[key]).map((obj) => obj.type === "waypoint" ? obj.key : obj.marker.key);
-                if (user.locations.startingLocation.info.isEntered && user.locations.destLocation.info.isEntered) {
+                if (user.locations.startingLocation.info.isEntered || user.locations.destLocation.info.isEntered) {
                     mapRef.current.fitToSuppliedMarkers(markers, {animated: true});
                 }
             }, 100)
         }
-    }, [user.locations, user.numberOfWaypoints])
+    }, [user.numberOfWaypoints, distance, duration])
 
 
     // useEffect(() => {
@@ -101,13 +104,35 @@ function HomeScreen({ navigation }) {
                                 .map((key) => user.locations[key].marker.description)} // creates an array of addresses from locations that have type of "waypoint"
                     : undefined)
                     }
+                    onReady={data => {
+                        if (data.distance.toFixed(1) < 1) {
+                            setDistance(`${1000 * (data.distance % 1)} m`)
+                        }
+                        else {
+                            setDistance(`${data.distance.toFixed(1)} km`);
+                        }
+
+                        let hoursDecimal = (data.duration / 60);
+                        let hours = Math.floor(hoursDecimal);
+
+                        let minutes = 60 * (hoursDecimal % 1);
+
+                        if (data.duration.toFixed(0) < 60) {
+                            setDuration(`${minutes.toFixed(0)} min`);
+                        }
+                        else if (data.duration.toFixed(0) % 60 === 0) {
+                            setDuration(`${hours} hr`);
+                        }
+                        else {
+                            setDuration(`${hours} hr ${minutes.toFixed(0)} min`);
+                        }
+                    }}
                     apikey={GOOGLE_API_KEY}
                     strokeWidth={3}
                     strokeColor="black"
                 />
 
             )}
-
 
             {user.locations.startingLocation.info.isEntered && (
                 <Marker {...user.locations.startingLocation.marker}/>
@@ -123,6 +148,7 @@ function HomeScreen({ navigation }) {
                 }))
             }
 
+
         </MapView>
 
         <Button onPress={() => {
@@ -130,6 +156,10 @@ function HomeScreen({ navigation }) {
         }}>
             <Text color="white">Add waypoint</Text>
         </Button>
+
+        <Text>Trip Information:</Text>
+        <Text>Distance: {distance}</Text>
+        <Text>Duration: {duration}</Text>
 
       </View>
   )
