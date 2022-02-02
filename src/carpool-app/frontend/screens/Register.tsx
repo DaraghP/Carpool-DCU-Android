@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from "react-native";
+import {SafeAreaView, ScrollView, StyleSheet, Text, View} from "react-native";
 import {Stack, Button, Center, FormControl, Heading, Input} from "native-base";
 import {useRef, useEffect, useState} from "react";
 import {updateUserState} from "../reducers/user-reducer";
@@ -10,9 +10,15 @@ function RegisterScreen({ navigation }) {
   const user = useAppSelector(state => state.user);
   const backendURL = useAppSelector(state => state.globals.backendURL);
 
+  const firstNameInput = useRef("");
+  const surnameInput = useRef("");
+  const phoneNoInput = useRef("");
   const usernameInput = useRef("");
   const passwordInput = useRef("");
   const reEnterPasswordInput = useRef("");
+  const [firstNameText, setFirstNameText] = useState("");
+  const [surnameText, setSurnameText] = useState("");
+  const [phoneNoText, setPhoneNoText] = useState("");
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
   const [reEnteredPasswordText, setReEnteredPasswordText] = useState("");
@@ -32,22 +38,25 @@ function RegisterScreen({ navigation }) {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
       },
-      body: JSON.stringify({username: usernameText, password: passwordText, reEnteredPassword: reEnteredPasswordText})
+      body: JSON.stringify({first_name: firstNameText, last_name: surnameText, phone_no:phoneNoText, username: usernameText, password: passwordText, reEnteredPassword: reEnteredPasswordText})
     }).then(response => response.json())
-    .then((res) => {
+    .then((res) => {    
         if (!("errorType" in res)) {
+            firstNameInput.current.clear();
+            surnameInput.current.clear();
+            phoneNoInput.current.clear();
             usernameInput.current.clear();
             passwordInput.current.clear();
-            reEnterPasswordInput.current.clear();
+            reEnterPasswordInput.current.clear(); 
 
             // prevents memory leak
             if (mounted.current) {
+                console.log(res.token);
                 dispatch(updateUserState({username: res.username, token: res.token}));
             }
 
             setErrorType("");
             setErrorText("");
-
         }
         else {
             setErrorType(res.errorType);
@@ -59,13 +68,32 @@ function RegisterScreen({ navigation }) {
   };
 
   return (
-      <View style={styles.container}>
-          <Stack direction="column" width="250">
+      <SafeAreaView style={styles.container}>
+          <ScrollView>
+            <Stack direction="column" width="250">
                 <Center>
                     <Heading size="md" mb="3">Register</Heading>
 
+                    <FormControl>
+                        <FormControl.Label>First Name</FormControl.Label>
+                        <Input placeholder="First name" ref={firstNameInput} onChangeText={(text: string) => {setFirstNameText(text)}}/>
+                        <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
+                    </FormControl>
+
+                    <FormControl>
+                        <FormControl.Label mt="5">Surname</FormControl.Label>
+                        <Input placeholder="Surname" ref={surnameInput} onChangeText={(text: string) => {setSurnameText(text)}}/>
+                        <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
+                    </FormControl>
+
+                    <FormControl>
+                        <FormControl.Label mt="5">Phone Number</FormControl.Label>
+                        <Input placeholder="Phone No" ref={phoneNoInput} onChangeText={(text: string) => {setPhoneNoText(text)}}/>
+                        <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
+                    </FormControl>
+
                     <FormControl isInvalid={errorType === "username"}>
-                        <FormControl.Label>Username</FormControl.Label>
+                        <FormControl.Label mt="5">Username</FormControl.Label>
                         <Input placeholder="Username" ref={usernameInput} onChangeText={(text: string) => {setUsernameText(text)}}/>
                         <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
                     </FormControl>
@@ -91,7 +119,8 @@ function RegisterScreen({ navigation }) {
                     </Button>
                 </Center>
           </Stack>
-      </View>
+        </ScrollView>
+      </SafeAreaView>
   )
 }
 

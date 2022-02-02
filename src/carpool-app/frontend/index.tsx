@@ -31,7 +31,7 @@ export default function Index() {
 
   useEffect(() => {
 
-    dispatch(updateGlobalsState({backendURL: "http://3238-46-7-17-96.ngrok.io"}));
+    dispatch(updateGlobalsState({backendURL: "https://00a9-2001-bb6-6792-1a00-d497-f561-6d0b-7c2a.ngrok.io"}));
     dispatch(setLocations({
         ...locations
     }));

@@ -26,7 +26,7 @@ SECRET_KEY = 'g+)&)x+f%!@b$y_7$jryui3ecx5bt7a1@_a+#@4(bquox_@8ih'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["a12b-2001-bb6-6792-1a00-e1db-2be1-4bec-9b.ngrok.io", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["00a9-2001-bb6-6792-1a00-d497-f561-6d0b-7c2a.ngrok.io", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'phonenumbers',
     'carpool',
 ]
 
