@@ -74,19 +74,19 @@ function RegisterScreen({ navigation }) {
                 <Center>
                     <Heading size="md" mb="3">Register</Heading>
 
-                    <FormControl>
+                    <FormControl isInvalid={errorType === "first_name"}>
                         <FormControl.Label>First Name</FormControl.Label>
                         <Input placeholder="First name" ref={firstNameInput} onChangeText={(text: string) => {setFirstNameText(text)}}/>
                         <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
                     </FormControl>
 
-                    <FormControl>
+                    <FormControl isInvalid={errorType === "last_name"}>
                         <FormControl.Label mt="5">Surname</FormControl.Label>
                         <Input placeholder="Surname" ref={surnameInput} onChangeText={(text: string) => {setSurnameText(text)}}/>
                         <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
                     </FormControl>
 
-                    <FormControl>
+                    <FormControl isInvalid={errorType === "phone"}>
                         <FormControl.Label mt="5">Phone Number</FormControl.Label>
                         <Input placeholder="Phone No" ref={phoneNoInput} onChangeText={(text: string) => {setPhoneNoText(text)}}/>
                         <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
