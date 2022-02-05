@@ -11,15 +11,24 @@ from .serializers import CarpoolUserSerializer
 
 # Create your views here.
 #
-def index(request):
-    format = request.GET.get("format", "")
 
-    if format == "json":
-        return JsonResponse({"test": "working"})
-
+"""
+Carpool API
+"""
 
 @api_view(["POST"])
 def register(request):
+    """
+    Users will send registration data on the app,
+    the registration data needs to be validated before creating the user,
+    such validation could be checking if the user already exists, or if the passwords entered do not match.
+    (see the check_registration_data method for more info in serializers.py)
+
+    If registration data is valid, a user is created along with their authorization token,
+    their user data is sent back in the response, and they are logged into django.
+    Otherwise, if invalid, an appropriate error message is sent back.
+    """
+
     if request.method == "POST":
         is_registration_correct = CarpoolUserSerializer.check_registration_data(data=request.data)
         if is_registration_correct is True:
@@ -41,6 +50,13 @@ def register(request):
 
 @api_view(["POST"])
 def login(request):
+    """
+    Users will send login data on the app.
+
+    If login data is valid, the user's data is sent back.
+    Otherwise, if invalid, an appropriate error message is sent back.
+    """
+
     if request.method == "POST":
         name = request.data.get("username")
         password = request.data.get("password")
@@ -59,6 +75,12 @@ def login(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def logout(request):
+    """
+    Users can logout through the settings menu.
+    Users send their auth token to be destroyed then we send back a 200 response to signal React Native to go back to
+    the login and registration screens.
+    """
+
     request.user.auth_token.delete()
     return Response(status=status.HTTP_200_OK)
 
@@ -66,5 +88,10 @@ def logout(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def delete_account(request):
+    """
+    Users can delete through the settings menu for account.
+    Users send their auth token to be destroyed then we send back a 200 response to signal React Native to go back to
+    the login and registration screens. All data related to the user should be deleted.
+    """
     request.user.delete()
     return Response(status=status.HTTP_200_OK)

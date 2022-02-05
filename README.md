@@ -1,28 +1,32 @@
-# CA326 template repo
 
-This is a template for CA326 projects.
+## Carpool app for DCU students on Android
+___
 
-## 1. Create your repo
+Description
+---
+This is app is for DCU students looking to share a ride with other DCU students built using Django and React Native (expo-cli and TypeScript).
+Students can select to go from DCUs campuses to a location or from a location to one of DCUs campuses. Students meet up with other students based on their interests/constraints, such as no smoking, or an interest in talking about sport.
+The intention of the app is to give students another way to socialise and to get to or from DCU.
 
-One person from your project team should fork this repo, then add other teammates as project members on GitLab.
+How it works, drivers would first input their start and destination, then their interests/constraints,
+then the app takes that information and shows these drivers to passengers based on both of their interests/constraints, showing the optimal routes.
+The passenger would then pick a driver based on those routes and interests/constraints and a request would be sent to the driver which can be accepted or denied.
+When a driver accepts a request a ride is shared.
 
-## 2. Name your repo appropriately
+Packages/References
+---
 
-The name of your project must be of the form `2022-ca326-XXXXXXX`, where "`XXXXXXX`"
-should be replaced with your usernames (e.g. `2022-ca326-sblott-pclarke`).
+### Backend
 
-**Note** that the year should be set as appropriate to your year of study. For example, in the
-2022/2023 academic year this would change to `2023-ca326-sblott-pclarke`),
-in the 2023/2024 academic year this would change to `2024-ca326-sblott-pclarke`), etc.
+Here are the list of packages that have been used so far for the backend.
 
-It is the *name of your repo* which matters (not the name of your project).
+>- [Django](https://www.djangoproject.com/)
+>- [Django REST framework](https://www.django-rest-framework.org/)
+>- [django-cors-headers](https://pypi.org/project/django-cors-headers/)
+>- [phonenumbers](https://pypi.org/project/phonenumbers/)
 
-You can change the name of your repo on GitLab under:
+These can be found in [requirements.txt](src/carpool-app/backend/requirements.txt) in the backend directory in src/carpool-app.
 
-- Settings / General / Advanced / Change path
+### Frontend
 
-It looks like this:
-
-![change-repo-path](./res/repo-change-path.png "Change repo path.")
-
-You should replace all of this file with a README describing your own project.
+For packages used for the frontend in React Native, see [package.json](src/carpool-app/frontend/package.json)

@@ -1,3 +1,7 @@
+/**
+* Currently used for storing user info and their trip info
+*/
+
 import {createAction, createSlice} from "@reduxjs/toolkit";
 import {createLocationObj, useAppDispatch, useAppSelector} from "../hooks";
 import {Marker} from "react-native-maps";

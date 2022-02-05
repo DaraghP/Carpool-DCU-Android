@@ -5,17 +5,27 @@ import phonenumbers
 
 
 class CarpoolUserSerializer(serializers.ModelSerializer):
+    """
+    CarpoolUser serializer used for registering users.
+    """
+
     class Meta:
         model = CarpoolUser
-        # fields = ["username", "password"]
+
         fields = ["username", "password", "first_name", "last_name", "phone_no"]
         extra_kwargs = {'password': {'write_only': True}}
 
     @classmethod
     def check_phone_number(cls, phone_number):
+        """
+        Checks the phone number if its valid (or used for testing).
+
+        :param phone_number:
+        :return: boolean, True if phone number is valid, False otherwise
+        """
         phone_number = str(phone_number)
         
-        fake_numbers_for_testing = set({"0"})
+        fake_numbers_for_testing = {"0"}
         if phone_number in fake_numbers_for_testing:
             return True
    
@@ -27,18 +37,26 @@ class CarpoolUserSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def check_registration_data(data):
+        """
+        This is used in the API for /register,
+        it checks if each field entered through the app is valid in the order each field is in.
+
+        :param data:
+        :return: True, if all fields are valid, otherwise a dict containing the appropriate error type and message is returned
+        """
+
         error_type = None
         error_message = None
         
         if len(data["first_name"]) < 1:
             error_type = "first_name"
-            error_message = "This field cannot not be empty."
+            error_message = "This field cannot be empty."
         elif not re.sub("['-]", "", data["first_name"]).isalpha():
             error_type = "first_name"
             error_message = "Names can only contain letters."
         elif len(data["last_name"]) < 1: 
             error_type = "last_name"
-            error_message = "This field cannot not be empty."
+            error_message = "This field cannot be empty."
         elif not re.sub("['-]", "", data["last_name"]).isalpha():
             error_type = "last_name"
             error_message = "Names can only contain letters."

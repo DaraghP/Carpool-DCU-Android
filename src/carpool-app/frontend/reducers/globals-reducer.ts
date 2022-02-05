@@ -1,3 +1,7 @@
+/**
+* Used for storing general global info, such as the backend url
+*/
+
 import {createAction, createSlice} from "@reduxjs/toolkit";
 
 

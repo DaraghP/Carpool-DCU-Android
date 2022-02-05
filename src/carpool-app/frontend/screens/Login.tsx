@@ -34,9 +34,6 @@ function LoginScreen({ navigation }) {
             usernameInput.current.clear();
             passwordInput.current.clear();
 
-            await AsyncStorage.setItem("token", res.token);
-            await AsyncStorage.getItem("token");
-
             // navigates to home screen once globals.user.token updates
             dispatch(updateUserState({username: usernameText, token: res.token}));
 
