@@ -1,30 +1,28 @@
-import {StyleSheet, View, SafeAreaView, TouchableOpacity} from "react-native";
+import {StyleSheet, View} from "react-native";
 import {useEffect, useRef, useState} from "react";
 import {GOOGLE_API_KEY} from "@env";
-import {GooglePlacesAutocomplete, GooglePlacesAutocompleteRef} from "react-native-google-places-autocomplete";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import {setLocations, setNumberOfWaypoints, updateUserState} from "../reducers/user-reducer";
-import {useAppDispatch, useAppSelector, createLocationObj} from "../hooks";
-import Ionicons from '@expo/vector-icons/Ionicons'
+import {setNumberOfWaypoints} from "../reducers/trips-reducer";
+import {useAppDispatch, useAppSelector} from "../hooks";
 import {Button, Center, Text} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
 
-function MapScreen({ role, navigation }) {
+function MapScreen({ role }) {
     const dispatch = useAppDispatch();
-    const user = useAppSelector(state => state.user);
+    const trips = useAppSelector(state => state.trips);
     const mapRef = useRef(null);
 
     const [distance, setDistance] = useState("");
     const [duration, setDuration] = useState("");
 
     const increaseWaypoints = () => {
-        let activeWaypoints = Object.keys(user.locations).filter((key) => user.locations[key].marker.description && user.locations[key].type === "waypoint" && user.locations[key].info.isEntered)
-                                .map((key) => user.locations[key].marker.description);
+        let activeWaypoints = Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
+                                .map((key) => trips.locations[key].marker.description);
 
-        if (user.numberOfWaypoints < 4) {
-            if ((user.numberOfWaypoints - activeWaypoints.length) === 0) {
-                dispatch(setNumberOfWaypoints(user.numberOfWaypoints + 1));
+        if (trips.numberOfWaypoints < 4) {
+            if ((trips.numberOfWaypoints - activeWaypoints.length) === 0) {
+                dispatch(setNumberOfWaypoints(trips.numberOfWaypoints + 1));
 
             } else {
                 console.log("error: fill waypoint field before adding another");
@@ -34,20 +32,23 @@ function MapScreen({ role, navigation }) {
         }
     }
 
+    const createTrip = () => {
+
+    }
 
     useEffect(() => {
         if (mapRef.current) {
             setTimeout(() => {
-                let waypointMarkers = Object.keys(user.locations).filter((key) => user.locations[key].marker.description && user.locations[key].type === "waypoint" && user.locations[key].info.isEntered)
-                            .map((key) => user.locations[key].marker.description);
+                let waypointMarkers = Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
+                            .map((key) => trips.locations[key].marker.description);
 
-                let markers = Object.keys(user.locations).map((key) => user.locations[key]).map((obj) => obj.type === "waypoint" ? obj.key : obj.marker.key);
-                if (user.locations.startingLocation.info.isEntered || user.locations.destLocation.info.isEntered) {
+                let markers = Object.keys(trips.locations).map((key) => trips.locations[key]).map((obj) => obj.type === "waypoint" ? obj.key : obj.marker.key);
+                if (trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) {
                     mapRef.current.fitToSuppliedMarkers(markers, {animated: true});
                 }
             }, 100)
         }
-    }, [user.numberOfWaypoints, distance, duration])
+    }, [trips.numberOfWaypoints, distance, duration])
 
 
   return (
@@ -55,23 +56,23 @@ function MapScreen({ role, navigation }) {
 
         <CreateGoogleAutocompleteInput
             key={1}
-            locationObj={user.locations.startingLocation}
+            locationObj={trips.locations.startingLocation}
             placeholder="Enter your starting point..."
         />
 
         <CreateGoogleAutocompleteInput
             key={2}
-            locationObj={user.locations.destLocation}
+            locationObj={trips.locations.destLocation}
             placeholder="Enter your destination..."
         />
 
-          {Object.keys(user.locations).sort().map((key) => {
-            if (user.locations[key].type === "waypoint") {
-                if (parseInt(key.charAt(key.length - 1)) <= user.numberOfWaypoints) {
+          {Object.keys(trips.locations).sort().map((key) => {
+            if (trips.locations[key].type === "waypoint") {
+                if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {
                     return (
                         <CreateGoogleAutocompleteInput
                             key={key}
-                            locationObj={user.locations[key]}
+                            locationObj={trips.locations[key]}
                         />
                     );
                 }
@@ -83,20 +84,20 @@ function MapScreen({ role, navigation }) {
             ref={mapRef}
             style={{flex: 1}}
             region={{
-                latitude: user.locations.startingLocation.info.coords.lat,
-                longitude: user.locations.startingLocation.info.coords.lng,
-                latitudeDelta: user.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
-                longitudeDelta: user.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
+                latitude: trips.locations.startingLocation.info.coords.lat,
+                longitude: trips.locations.startingLocation.info.coords.lng,
+                latitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
+                longitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
             }}
         >
-            {user.locations.startingLocation.info.isEntered && user.locations.destLocation.info.isEntered && (
+            {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
 
                 <MapViewDirections
-                    origin={user.locations.startingLocation.marker.description}
-                    destination={user.locations.destLocation.marker.description}
-                    {...(user.numberOfWaypoints > 0 ?
-                    {waypoints: Object.keys(user.locations).filter((key) => user.locations[key].marker.description && user.locations[key].type === "waypoint" && user.locations[key].info.isEntered)
-                                .map((key) => user.locations[key].marker.description)} // creates an array of addresses from locations that have type of "waypoint"
+                    origin={trips.locations.startingLocation.marker.description}
+                    destination={trips.locations.destLocation.marker.description}
+                    {...(trips.numberOfWaypoints > 0 ?
+                    {waypoints: Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
+                                .map((key) => trips.locations[key].marker.description)} // creates an array of addresses from locations that have type of "waypoint"
                     : undefined)
                     }
                     onReady={data => {
@@ -129,17 +130,17 @@ function MapScreen({ role, navigation }) {
 
             )}
 
-            {user.locations.startingLocation.info.isEntered && (
-                <Marker {...user.locations.startingLocation.marker}/>
+            {trips.locations.startingLocation.info.isEntered && (
+                <Marker {...trips.locations.startingLocation.marker}/>
             )}
 
-            {user.locations.destLocation.info.isEntered && (
-                <Marker {...user.locations.destLocation.marker}/>
+            {trips.locations.destLocation.info.isEntered && (
+                <Marker {...trips.locations.destLocation.marker}/>
             )}
 
-            {user.locations.startingLocation.info.isEntered && user.locations.destLocation.info.isEntered && (
-                Object.keys(user.locations).sort().map((key) => {
-                    return (user.locations[key].type === "waypoint" && user.locations[key].info.isEntered) && <Marker {...user.locations[key].marker}/>;
+            {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
+                Object.keys(trips.locations).sort().map((key) => {
+                    return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) && <Marker {...trips.locations[key].marker}/>;
                 }))
             }
 
@@ -152,6 +153,13 @@ function MapScreen({ role, navigation }) {
             <Text color="white">Add waypoint</Text>
         </Button>
 
+        <Button onPress={() => {
+            createTrip();
+        }}>
+            <Text color="white">Create Trip</Text>
+        </Button>
+
+
         <Text>Trip Information:</Text>
         <Text>Distance: {distance}</Text>
         <Text>Duration: {duration}</Text>
@@ -159,6 +167,7 @@ function MapScreen({ role, navigation }) {
       </View>
   )
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

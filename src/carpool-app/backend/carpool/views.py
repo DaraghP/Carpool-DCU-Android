@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .serializers import CarpoolUserSerializer
-
+from .serializers import CarpoolUserSerializer, DriverSerializer, CarSerializer
+from .models import *
 
 # Create your views here.
 #
@@ -93,5 +93,51 @@ def delete_account(request):
     Users send their auth token to be destroyed then we send back a 200 response to signal React Native to go back to
     the login and registration screens. All data related to the user should be deleted.
     """
+
     request.user.delete()
     return Response(status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_driver(request):
+    """
+    Gets driver, if they exist, their details are sent back in the response,
+    otherwise it returns status 404.
+    """
+
+    if Driver.objects.filter(uid = request.user.id).exists():
+        print("Driver exists!", request.user.id)
+    else:
+        print("Driver does not exist yet. Fill out form")
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    return Response({}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_driver(request):
+    """
+    Creates driver if they already don't exist, and returns their details,
+    if the driver already exists an error is sent back in the response.    
+    """
+
+# commit message: "Added functionality to create new driver. Moved some global state from user to trips."
+# lemme add to .gitignore
+    if request.method == "POST":
+        is_vehicle_valid = True  # TODO: validate car details
+        if is_vehicle_valid is True:
+            user = request.user
+            name = f"{user.first_name} {user.last_name[0]}."
+            temp_car = CarSerializer(data=request.data)
+            car = temp_car.create(request.data)
+            driver_data = {"name": name, "car": car, "uid": request.user}
+
+            driver = DriverSerializer(data=request.data)
+            driver.create(driver_data)
+
+            return Response(request.data, status=status.HTTP_201_CREATED)
+
+        else:
+            return Response({"error": ""}, status=status.HTTP_400_BAD_REQUEST)

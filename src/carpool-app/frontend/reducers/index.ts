@@ -1,9 +1,11 @@
 import user from "./user-reducer";
+import trips from "./trips-reducer";
 import globals from "./globals-reducer";
 
 const reducers = {
     globals,
-    user
+    user,
+    trips
 };
 
 export default reducers;

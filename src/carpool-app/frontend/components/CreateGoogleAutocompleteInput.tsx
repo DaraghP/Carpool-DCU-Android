@@ -1,4 +1,4 @@
-import {setLocations, setNumberOfWaypoints, updateUserState} from "../reducers/user-reducer";
+import {setLocations, setNumberOfWaypoints} from "../reducers/trips-reducer";
 import {GooglePlacesAutocomplete, GooglePlacesAutocompleteRef} from "react-native-google-places-autocomplete";
 import {useEffect, useRef, useState} from "react";
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,21 +10,21 @@ import {GOOGLE_API_KEY} from "@env";
 
 const CreateGoogleAutocompleteInput = ({locationObj, placeholder = "Enter a waypoint..."}) => {
     const dispatch = useAppDispatch();
-    const user = useAppSelector(state => state.user);
+    const trips = useAppSelector(state => state.trips);
     const markerRef = useRef<GooglePlacesAutocomplete>();
 
     useEffect(() => {
         markerRef.current?.setAddressText(locationObj.marker.description);
-    }, [user.numberOfWaypoints])
+    }, [trips.numberOfWaypoints])
 
     const deleteWaypoint = (waypoint) => {
         let waypointNum = parseInt(waypoint.key.charAt(waypoint.key.length - 1));
-        let tempLocations: any = new Map(Object.entries(user.locations));
+        let tempLocations: any = new Map(Object.entries(trips.locations));
         tempLocations.delete("startingLocation");
         tempLocations.delete("destLocation");
 
         let tempObj;
-        while (waypointNum !== user.numberOfWaypoints) {
+        while (waypointNum !== trips.numberOfWaypoints) {
             // swap locations
             tempObj = tempLocations.get(`waypoint${waypointNum + 1}`);
             tempLocations.set(`waypoint${waypointNum}`, {
@@ -49,8 +49,8 @@ const CreateGoogleAutocompleteInput = ({locationObj, placeholder = "Enter a wayp
             waypointNum++;
         }
 
-        tempObj = tempLocations.get(`waypoint${user.numberOfWaypoints}`);
-        tempLocations.set(`waypoint${user.numberOfWaypoints}`, {
+        tempObj = tempLocations.get(`waypoint${trips.numberOfWaypoints}`);
+        tempLocations.set(`waypoint${trips.numberOfWaypoints}`, {
             ...tempObj,
             info: {
                 coords: {lat: 0, lng: 0},
@@ -68,7 +68,7 @@ const CreateGoogleAutocompleteInput = ({locationObj, placeholder = "Enter a wayp
 
         markerRef.current?.setAddressText("");
         dispatch(setLocations(Object.fromEntries(tempLocations)));
-        dispatch(setNumberOfWaypoints(user.numberOfWaypoints - 1));
+        dispatch(setNumberOfWaypoints(trips.numberOfWaypoints - 1));
     }
 
     const handlePlacesResp = (locationObj, data, details) => {

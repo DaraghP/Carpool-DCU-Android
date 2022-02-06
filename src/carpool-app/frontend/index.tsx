@@ -11,7 +11,9 @@ import {useState, useEffect, useMemo, useCallback} from "react";
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {updateGlobalsState} from "./reducers/globals-reducer";
 import {createLocationObj, useAppDispatch, useAppSelector} from "./hooks";
-import {setLocations} from "./reducers/user-reducer";
+import {setLocations} from "./reducers/trips-reducer";
+import PassengerScreen from "./screens/Passenger";
+import DriverScreen from "./screens/Driver";
 
 const Tab = createBottomTabNavigator();
 
@@ -31,7 +33,7 @@ export default function Index() {
 
   useEffect(() => {
 
-    dispatch(updateGlobalsState({backendURL: "https://06c0-2001-bb6-6792-1a00-547f-95d7-677c-e7bc.ngrok.io"}));
+    dispatch(updateGlobalsState({backendURL: "http://2217-46-7-17-96.ngrok.io"}));
     dispatch(setLocations({
         ...locations
     }));
@@ -57,7 +59,16 @@ export default function Index() {
                     {tabBarIcon: () => {return <Ionicons name="home" size={25} color={"grey"}/>;}}
                   }
                 />
-
+                <Tab.Screen name="Passenger" component={PassengerScreen}
+                  options={
+                    {tabBarIcon: () => {return <Ionicons name="body" size={25} color="grey"/>;}}
+                  }
+                />
+                <Tab.Screen name="Driver" component={DriverScreen}
+                  options={
+                    {tabBarIcon: () => {return <Ionicons name="car-outline" size={25} color="grey"/>;}}
+                  }
+                />
                 <Tab.Screen name="Settings" component={SettingsScreen}
                   options={
                     {headerShown: false, tabBarIcon: () => {return <Ionicons name="settings-outline" size={25} color={"grey"}/>;}}

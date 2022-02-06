@@ -26,7 +26,7 @@ SECRET_KEY = 'g+)&)x+f%!@b$y_7$jryui3ecx5bt7a1@_a+#@4(bquox_@8ih'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["06c0-2001-bb6-6792-1a00-547f-95d7-677c-e7bc.ngrok.io", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["2217-46-7-17-96.ngrok.io", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -135,6 +135,9 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = "carpool.CarpoolUser"
 
 STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"
+
 
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',

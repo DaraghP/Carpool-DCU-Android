@@ -9,7 +9,7 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 
 // hooks 
-export const createLocationObj = (key: string, type: string, typeTitle: string, coords: { lat: number, lng: number } = {lat: 0, lng: 0}, numberofWaypoints: number = 0) => {
+export const createLocationObj = (key: string, type: string, typeTitle: string, coords: { lat: number, lng: number } = {lat: 0, lng: 0}) => {
     const id = type === "waypoint" ? key : type;
 
     return (

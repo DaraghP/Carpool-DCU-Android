@@ -8,6 +8,7 @@ carpool-app/backend/carpool/migrations/
 carpool-app/backend/db.sqlite3
 ../.idea/
 .idea/
+../venv/
 
 
 carpool-app/frontend/node_modules/

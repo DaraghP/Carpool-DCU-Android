@@ -17,12 +17,12 @@ function HomeScreen({ navigation }) {
             
             <Center paddingX={"5"}>
                  <HStack space={5}>
-                        <Button width="50%" height="350%" onPress = {() => console.log("Driver role selected")}>
+                        <Button width="50%" height="350%" onPress = {() => {console.log("Driver role selected"); navigation.navigate("Driver")}}>
                             <Ionicons name="car-outline" size={80} color="white"/>
                             <Heading style={{letterSpacing: 2.5}} color="white" textAlign="center">Driver</Heading> 
                         </Button>
 
-                        <Button width="50%" height="350%" onPress = {() => console.log("Passenger role selected")}> 
+                        <Button width="50%" height="350%" onPress = {() => {console.log("Passenger role selected"); navigation.navigate("Passenger")}}>
                             <Ionicons style={{textAlign: "center"}} name="body" size={80} color="white"/>
                             <Heading style={{letterSpacing: 2.5}} color="white" textAlign="center">Passenger</Heading> 
                         </Button>
