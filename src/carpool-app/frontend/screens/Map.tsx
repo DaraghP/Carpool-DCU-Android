@@ -5,16 +5,24 @@ import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import {setNumberOfWaypoints} from "../reducers/trips-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
-import {Button, Center, Text} from "native-base";
+import {Button, Center, Text, Select, FormControl} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+
 
 function MapScreen({ role }) {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
+    const user = useAppSelector(state => state.user);
+    const backendURL = useAppSelector(state => state.globals.backendURL);
     const mapRef = useRef(null);
 
     const [distance, setDistance] = useState("");
     const [duration, setDuration] = useState("");
+    const [timeOfDeparture, setTimeOfDeparture] = useState<Date>(new Date());
+    const [carAvailableSeats, setCarAvailableSeats] = useState(0);
+
+    const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
 
     const increaseWaypoints = () => {
         let activeWaypoints = Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
@@ -32,9 +40,54 @@ function MapScreen({ role }) {
         }
     }
 
+    
     const createTrip = () => {
+        let waypoints = {};
 
+        Object.keys(trips.locations).sort().map((locationKey) => {
+            if (trips.locations[locationKey].type === "waypoint" && trips.locations[locationKey].info.isEntered) {
+                waypoints[locationKey] = {name: trips.locations[locationKey].marker.description, ...trips.locations[locationKey].info.coords}
+            }
+        })
+
+        let trip_data = {
+            start: {
+                name: trips.locations.startingLocation.marker.description,
+                lng: trips.locations.startingLocation.info.coords.lng,
+                lat: trips.locations.startingLocation.info.coords.lat
+            },
+            destination: {
+                name: trips.locations.destLocation.marker.description,
+                lng: trips.locations.destLocation.info.coords.lng,
+                lat: trips.locations.destLocation.info.coords.lat
+            }, 
+            waypoints: waypoints,
+            passengers: {},
+            available_seats: carAvailableSeats,
+            duration: duration,
+            distance: distance,
+            time_of_departure: timeOfDeparture,
+        };
+       
+        fetch(`${backendURL}/create_trip`, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${user.token}`
+            },
+            body: JSON.stringify(trip_data)
+        }).then(response => response.json())
+        .then(res => {
+            if (!("errorType" in res)) {
+                console.log(res);
+            } 
+            else {
+                console.log(res.errorType, res.errorMessage);
+            }
+        })
     }
+
 
     useEffect(() => {
         if (mapRef.current) {
@@ -59,7 +112,7 @@ function MapScreen({ role }) {
             locationObj={trips.locations.startingLocation}
             placeholder="Enter your starting point..."
         />
-
+        
         <CreateGoogleAutocompleteInput
             key={2}
             locationObj={trips.locations.destLocation}
@@ -79,6 +132,23 @@ function MapScreen({ role }) {
             }
         })}
 
+
+        <Button onPress={() => {
+            increaseWaypoints();
+        }}>
+            <Text color="white">Add waypoint</Text>
+        </Button>
+
+        <Button onPress={() => {setTimePickerVisibility(true)}}>
+            Select time of departure
+        </Button>
+
+        <DateTimePickerModal
+            mode="time"
+            isVisible={isTimePickerVisible}
+            onConfirm={(time) => {console.log("Time selected:", time); setTimeOfDeparture(time); setTimePickerVisibility(false)}}
+            onCancel={() => {setTimePickerVisibility(false)}}
+        />
 
         <MapView
             ref={mapRef}
@@ -146,19 +216,21 @@ function MapScreen({ role }) {
 
 
         </MapView>
+        
+        <Select placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
+            {[0, 1, 2, 3, 4, 5].map((number) => {
+                    return <Select.Item key={`select${number}`} label={`${number}`} value={`${number}`}/>
+             })
+            }
+        </Select>
 
-        <Button onPress={() => {
-            increaseWaypoints();
-        }}>
-            <Text color="white">Add waypoint</Text>
-        </Button>
-
-        <Button onPress={() => {
+        {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+            <Button onPress={() => {
             createTrip();
-        }}>
-            <Text color="white">Create Trip</Text>
-        </Button>
-
+            }}>
+                <Text color="white">Create Trip</Text>
+            </Button>
+        }
 
         <Text>Trip Information:</Text>
         <Text>Distance: {distance}</Text>

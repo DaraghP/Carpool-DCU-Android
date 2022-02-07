@@ -5,10 +5,11 @@ import {useRef, useEffect, useState} from "react";
 import {useAppSelector} from "../hooks";
 import {FormControl, Input} from "native-base";
 
+
 function DriverScreen({navigation}) {
     const backendURL = useAppSelector(state => state.globals.backendURL);
     const user = useAppSelector(state => state.user);
-    const [requestFinished, setRequestFinished] = useState(false);
+    const [getDriverRequestFinished, setGetDriverRequestFinished] = useState(false);
     const [hasCreatedDriverRole, setHasCreatedDriverRole] = useState(false);
 
     const makeInput = useRef("");
@@ -33,11 +34,11 @@ function DriverScreen({navigation}) {
         .then(async (res) => {
             if (res.status === 404) {
                 setHasCreatedDriverRole(false);
-                setRequestFinished(true);
+                setGetDriverRequestFinished(true);
             }
             else {
                 setHasCreatedDriverRole(true);
-                setRequestFinished(true);
+                setGetDriverRequestFinished(true);
             }
         }).catch((e) => {
             console.error(e)
@@ -64,7 +65,7 @@ function DriverScreen({navigation}) {
             console.log("NEW DRIVER CREATED");
 
             setHasCreatedDriverRole(true);
-            setRequestFinished(true);
+            setGetDriverRequestFinished(true);
         }
         else {
             console.log("Error");
@@ -76,13 +77,13 @@ function DriverScreen({navigation}) {
 
     return (
         <SafeAreaView style={{flex: 1}}>
-            {!requestFinished &&
+            {!getDriverRequestFinished &&
                 <Center>
                     <Spinner size="lg" height="100%"/>
                 </Center>
             }
 
-            {requestFinished && !hasCreatedDriverRole &&
+            {getDriverRequestFinished && !hasCreatedDriverRole &&
                 <VStack space={"5"} margin="5" alignItems="center">
                     <Heading size="md">Car Details</Heading>
                     <FormControl>
@@ -119,7 +120,7 @@ function DriverScreen({navigation}) {
                 </VStack>
             }
 
-            {requestFinished && hasCreatedDriverRole &&
+            {getDriverRequestFinished && hasCreatedDriverRole &&
                 <MapScreen role={"driver"}/>
             }
 

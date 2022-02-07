@@ -1,6 +1,6 @@
 import re
 from rest_framework import serializers
-from .models import CarpoolUser, Driver, Car
+from .models import CarpoolUser, Driver, Car, Trip
 import phonenumbers
 
 
@@ -125,3 +125,26 @@ class CarSerializer(serializers.ModelSerializer):
         car = Car(make=valid_data["make"], model=valid_data["model"], colour=valid_data["colour"], license_plate=valid_data["license_plate"])
         car.save()
         return car
+
+class TripSerializer(serializers.ModelSerializer):
+    """
+    Trip serializer used for creating the trip for Driver.
+    """
+
+    class Meta:
+        model = Trip
+        fields = ["start", "destination", "waypoints", "distance", "duration", "passengers", "available_seats", "time_of_departure"]
+
+    def create(self, data):
+        trip = Trip(driver_id=data["driver_id"], 
+                    time_of_departure=data["time_of_departure"],
+                    start=data["start"],
+                    destination=data["destination"],
+                    waypoints=data["waypoints"],
+                    distance=data["distance"],
+                    duration=data["duration"],
+                    passengers=data["passengers"],
+                    available_seats=data["available_seats"]
+                   )
+        trip.save()
+        return trip

@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .serializers import CarpoolUserSerializer, DriverSerializer, CarSerializer
+from .serializers import *
 from .models import *
 
 # Create your views here.
@@ -123,8 +123,6 @@ def create_driver(request):
     if the driver already exists an error is sent back in the response.    
     """
 
-# commit message: "Added functionality to create new driver. Moved some global state from user to trips."
-# lemme add to .gitignore
     if request.method == "POST":
         is_vehicle_valid = True  # TODO: validate car details
         if is_vehicle_valid is True:
@@ -141,3 +139,19 @@ def create_driver(request):
 
         else:
             return Response({"error": ""}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_trip(request):
+    """
+    Creates trip for driver, for the passengers to search for. 
+    """
+
+    if request.method == 'POST':
+        driver = Driver.objects.get(uid=request.user.id)
+        trip = TripSerializer({"driver_id": driver, **request.data})
+        trip.create({"driver_id": driver, **request.data})
+        return Response(status=status.HTTP_200_OK)
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)

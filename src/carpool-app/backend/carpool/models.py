@@ -1,6 +1,7 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
-
+from django.utils import timezone
 # Create your models here.
 
 
@@ -25,16 +26,19 @@ class Passenger(models.Model):
     name = models.CharField(max_length=150)
     current_trip = models.ForeignKey("Trip", null=True, on_delete=models.CASCADE)
 
-
+# 
 class Trip(models.Model):
     id = models.AutoField(primary_key=True)
-    start = models.CharField(max_length=150)
-    destination = models.CharField(max_length=150)
-    distance = models.DecimalField(max_digits=10000, decimal_places=2)
     driver_id = models.ForeignKey("Driver", on_delete=models.CASCADE)
-    passenger_id = models.ForeignKey("Passenger", on_delete=models.CASCADE)
-    # constraints = models.OneToOneField(Constraints, on_delete=models.CASCADE)
-
+    time_of_departure = models.DateTimeField(default=timezone.now())
+    start = models.JSONField(default=dict)
+    destination = models.JSONField(default=dict)
+    waypoints = models.JSONField(default=dict)
+    distance = models.CharField(default="0", max_length=150)
+    duration = models.CharField(default="0", max_length=150)
+    passengers = models.JSONField(default=dict)
+    available_seats = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    # TODO: constraints
 
 class Car(models.Model):
     id = models.AutoField(primary_key=True)
