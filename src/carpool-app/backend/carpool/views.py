@@ -1,4 +1,7 @@
+import json
 from django.http import JsonResponse
+from django.core import serializers as django_serializers
+from django.forms.models import model_to_dict
 from django.contrib.auth import authenticate, login as django_login
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -153,5 +156,25 @@ def create_trip(request):
         trip = TripSerializer({"driver_id": driver, **request.data})
         trip.create({"driver_id": driver, **request.data})
         return Response(status=status.HTTP_200_OK)
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_trips(request):
+    """
+    Used by passengers to search for trips
+    """
+
+    if request.method == 'GET':
+        all_trips = Trip.objects.all()
+        trips_serialized = json.loads(django_serializers.serialize("json", all_trips))
+        for index, trip in enumerate(trips_serialized):
+            driver_name = Driver.objects.get(id=trips_serialized[index]["fields"]["driver_id"]).nam
+            trips_serialized[index] = {"pk": trip["pk"], "driver_name": driver_name, **trip["fields"]}
+
+        # TODO : make the algorithm to sort the trips
+        return Response(trips_serialized, status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)

@@ -1,10 +1,21 @@
-import {View} from "native-base";
+import {Button, Center, VStack, Heading, Spinner} from "native-base";
+import MapScreen from "./Map"
+import {SafeAreaView} from "react-native";
+import {useRef, useEffect, useState} from "react";
+import {useAppSelector} from "../hooks";
+import {FormControl, Input} from "native-base";
+
 
 function PassengerScreen({navigation}) {
-    return (
-        <View>
+    const backendURL = useAppSelector(state => state.globals.backendURL);
+    const user = useAppSelector(state => state.user);
 
-        </View>
+    return (
+        <SafeAreaView style={{flex: 1}}>
+
+            <MapScreen role={"passenger"}/>
+
+        </SafeAreaView>
     )
 }
 

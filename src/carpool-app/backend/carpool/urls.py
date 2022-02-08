@@ -10,5 +10,6 @@ urlpatterns = [
     path("delete", views.delete_account, name="delete-account"),
     path("get_driver", views.get_driver, name="get-driver"),
     path("create_driver", views.create_driver, name="create-driver"),
-    path("create_trip", views.create_trip, name="create-trip")
+    path("create_trip", views.create_trip, name="create-trip"),
+    path("get_trips", views.get_trips, name="get-trips"),
 ]
