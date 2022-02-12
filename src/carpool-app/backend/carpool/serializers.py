@@ -1,6 +1,6 @@
 import re
 from rest_framework import serializers
-from .models import CarpoolUser, Driver, Car, Trip
+from .models import CarpoolUser, Driver, Car, Trip, Passenger
 import phonenumbers
 
 
@@ -110,6 +110,21 @@ class DriverSerializer(serializers.ModelSerializer):
         driver = Driver(uid=valid_data["uid"], name=valid_data["name"], car=valid_data["car"])
         driver.save()
         return driver
+
+
+class PassengerSerializer(serializers.ModelSerializer):
+    """
+    Passenger serializer used for creating the passenger role for CarpoolUser.
+    """
+
+    class Meta:
+        model = Passenger
+        fields = ["uid", "name"]
+
+    def create(self, valid_data):
+        passenger = Passenger(uid=valid_data["uid"], name=valid_data["name"])
+        passenger.save()
+        return passenger
 
 
 class CarSerializer(serializers.ModelSerializer):

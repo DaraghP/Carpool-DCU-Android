@@ -6,7 +6,29 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 function HomeScreen({ navigation }) {
     const dispatch = useAppDispatch();
-    const user = useAppSelector(state => state.user); 
+    const user = useAppSelector(state => state.user);
+    const backendURL = useAppSelector(state => state.globals.backendURL);
+
+    const createPassenger = () => {
+        fetch(`${backendURL}/create_passenger`, {
+            method: "GET",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${user.token}`
+            },
+        }).then(response => response.json())
+        .then((res) => {
+        if (!("errorType" in res)) {
+            console.log("New Passenger created.");
+        }
+        else {
+            console.log("Passenger Already Exists");
+        }
+        }).catch((e) => {
+            console.error(e);
+        });
+    };
 
     return (
         <View style={styles.container}>
@@ -22,7 +44,7 @@ function HomeScreen({ navigation }) {
                             <Heading style={{letterSpacing: 2.5}} color="white" textAlign="center">Driver</Heading> 
                         </Button>
 
-                        <Button width="50%" height="350%" onPress = {() => {console.log("Passenger role selected"); navigation.navigate("Passenger")}}>
+                        <Button width="50%" height="350%" onPress = {() => {console.log("Passenger role selected"); createPassenger(); navigation.navigate("Passenger")}}>
                             <Ionicons style={{textAlign: "center"}} name="body" size={80} color="white"/>
                             <Heading style={{letterSpacing: 2.5}} color="white" textAlign="center">Passenger</Heading> 
                         </Button>

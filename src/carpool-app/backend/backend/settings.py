@@ -23,10 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'g+)&)x+f%!@b$y_7$jryui3ecx5bt7a1@_a+#@4(bquox_@8ih'
 
+# TODO: add google api key
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["7643-46-7-17-96.ngrok.io", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["6733-46-7-17-96.ngrok.io", "localhost", "127.0.0.1"]
 
 # Application definition
 

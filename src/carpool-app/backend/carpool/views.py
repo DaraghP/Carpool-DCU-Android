@@ -144,6 +144,23 @@ def create_driver(request):
             return Response({"error": ""}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def create_passenger(request):
+    if Passenger.objects.filter(uid=request.user.id).exists():
+        print("Passenger already exists!")
+        return Response({"error": ""}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        user = CarpoolUser.objects.get(id=request.user.id)
+        name = f"{user.first_name} {user.last_name[0]}."
+        passenger_data = {"name": name, "uid": request.user}
+        passenger = PassengerSerializer(data=passenger_data)
+        passenger.create(passenger_data)
+
+        print("New Passenger:", name)
+        return Response(status=status.HTTP_201_CREATED)
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_trip(request):
@@ -160,18 +177,24 @@ def create_trip(request):
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def get_trips(request):
     """
     Used by passengers to search for trips
     """
 
-    if request.method == 'GET':
+    if request.method == 'POST':
+        passenger = CarpoolUser.objects.get(id=request.user.id)
+        print("Passenger:", passenger)
+
         all_trips = Trip.objects.all()
-        trips_serialized = json.loads(django_serializers.serialize("json", all_trips))
+        sorted_trips = all_trips.order_by("time_of_departure")
+
+        trips_serialized = json.loads(django_serializers.serialize("json", sorted_trips))
+
         for index, trip in enumerate(trips_serialized):
-            driver_name = Driver.objects.get(id=trips_serialized[index]["fields"]["driver_id"]).nam
+            driver_name = Driver.objects.get(id=trips_serialized[index]["fields"]["driver_id"]).name
             trips_serialized[index] = {"pk": trip["pk"], "driver_name": driver_name, **trip["fields"]}
 
         # TODO : make the algorithm to sort the trips

@@ -1,17 +1,16 @@
-import {StyleSheet, View, ScrollView, SafeAreaView} from "react-native";
+import {StyleSheet, View, ScrollView, SafeAreaView, TouchableOpacity} from "react-native";
 import {useEffect, useRef, useState} from "react";
+import "react-native-get-random-values";
+import {v4} from "uuid";
 import {GOOGLE_API_KEY} from "@env";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import {setNumberOfWaypoints} from "../reducers/trips-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
-import {Button, Center, Text, Select, FormControl, Box} from "native-base";
+import {Button,  Text, Select, Heading, VStack, Flex} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-// import Collapsible from 'react-native-collapsible';
-// import Accordion from "react-native-collapsible/Accordion";
-import {Collapse, CollapseHeader, CollapseBody} from "accordion-collapse-react-native"
-
+import {SwipeablePanel} from "rn-swipeable-panel";
 
 function MapScreen({ role }) {
     const dispatch = useAppDispatch();
@@ -26,6 +25,15 @@ function MapScreen({ role }) {
     const [carAvailableSeats, setCarAvailableSeats] = useState(0);
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
     const [tripsFound, setTripsFound] = useState(null);
+    const [isPanelActive, setIsPanelActive] = useState(false);
+
+    const openPanel = () => {
+        setIsPanelActive(true);
+    };
+
+    const closePanel = () => {
+        setIsPanelActive(false);
+    };
 
     const increaseWaypoints = () => {
         let activeWaypoints = Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
@@ -93,13 +101,30 @@ function MapScreen({ role }) {
 
     // for passenger only
     const searchTrips = () => {
+        let trip_data = {
+            start: {
+                name: trips.locations.startingLocation.marker.description,
+                lng: trips.locations.startingLocation.info.coords.lng,
+                lat: trips.locations.startingLocation.info.coords.lat
+            },
+            destination: {
+                name: trips.locations.destLocation.marker.description,
+                lng: trips.locations.destLocation.info.coords.lng,
+                lat: trips.locations.destLocation.info.coords.lat
+            },
+            duration: duration,
+            distance: distance,
+            time_of_departure: timeOfDeparture,
+        };
+
         fetch(`${backendURL}/get_trips`, {
-            method: "GET",
+            method: "POST",
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Token ${user.token}`
             },
+            body: JSON.stringify(trip_data)
         }).then(response => response.json())
         .then(res => { //
             if (!("errorType" in res)) {
@@ -131,13 +156,14 @@ function MapScreen({ role }) {
       <View style={styles.container}>
         <View style={{flex: 1, elevation: -1, zIndex: -1}}>
             <CreateGoogleAutocompleteInput
-                key={1}
+                key={v4()}
                 locationObj={trips.locations.startingLocation}
                 placeholder="Enter your starting point..."
+                style={{rounded: 5}}
             />
 
             <CreateGoogleAutocompleteInput
-                key={2}
+                key={v4()}
                 locationObj={trips.locations.destLocation}
                 placeholder="Enter your destination..."
             />
@@ -245,7 +271,7 @@ function MapScreen({ role }) {
         {role === "driver" &&
           <Select placeholder="Choose your number of available seats"
                   onValueChange={value => setCarAvailableSeats(parseInt(value))}>
-              {[0, 1, 2, 3, 4, 5].map((number) => {
+              {[...Array(5).keys()].map((number) => {
                   return <Select.Item key={`select${number}`} label={`${number}`} value={`${number}`}/>
               })
               }
@@ -260,40 +286,54 @@ function MapScreen({ role }) {
             </Button>
         }
 
-        {role === "passenger" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
-            <Button onPress={() => {
-               searchTrips();
-            }}>
-                <Text color="white">Search for Trips</Text>
-            </Button>
-        }
-
         {/*<Text>Trip Information:</Text>*/}
         {/*<Text>Distance: {distance}</Text>*/}
         {/*<Text>Duration: {duration}</Text>*/}
+        {role === "passenger" &&
+            <>
+                <Button onPress={() => {
+                    openPanel();
+                    searchTrips();
+                }}>Show Trips</Button>
+                <SwipeablePanel
+                    scrollViewProps={{style: {padding: 10}}}
+                    fullWidth={true}
+                    openLarge={true}
+                    closeOnTouchOutside={true}
+                    isActive={isPanelActive}
+                    showCloseButton={true}
+                    onPressCloseButton={() => {
+                        closePanel();
+                    }}
+                    onClose={() => {
+                        setIsPanelActive(false);
+                    }}
+                >
+                    <Heading mb={2}>Nearby Drivers</Heading>
 
-        <Collapse style={{elevation: 100, transform: [{rotateX: "180deg"}]}}>
-            <CollapseHeader style={{transform: [{rotateX: "180deg"}]}}>
-                <Center>
-                    <Text>
-                        Search for Trips
-                    </Text>
-                </Center>
-            </CollapseHeader>
-            <CollapseBody style={{transform: [{rotateX: "180deg"}]}}>
-                {tripsFound !== null &&
-                    Object.keys(tripsFound).map((tripKey) => {
-                        return (
-                            <Box key={`trip${tripKey}`}>
-                                <Text>{tripsFound[tripKey].driver_name} {tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                            </Box>
-                        )
-                    })
-                }
-                <Button onPress={() => {searchTrips()}}>Search trips</Button>
-            </CollapseBody>
-        </Collapse>
+                    {tripsFound !== null &&
+                        Object.keys(tripsFound).map((tripKey) => {
+                            return (
+                                <TouchableOpacity key={`trip${tripKey}`} style={styles.tripButton}>
+                                    <Flex direction="row" wrap="wrap">
+                                        <VStack maxWidth="75%">
+                                            <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
+                                            <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
+                                            <Text>{tripsFound[tripKey].time_of_departure}</Text>
+                                        </VStack>
+                                        <Button style={{flexDirection: "row", marginLeft: "auto"}} onPress={() => {
+                                            console.log("Trip requested.");
+                                        }}>
+                                            Request
+                                        </Button>
+                                    </Flex>
+                                </TouchableOpacity>
+                            );
+                        })}
 
+                </SwipeablePanel>
+            </>
+        }
       </View>
   )
 }
@@ -307,6 +347,15 @@ const styles = StyleSheet.create({
   googlePlacesSearch: {
       flex: 0,
       fontSize: 20
+  },
+  tripButton: {
+      borderBottomColor: "#e4e4eb",
+      borderTopColor: "#e4e4eb",
+      borderBottomWidth: 0.5,
+      borderTopWidth: 0.5,
+      flex: 1,
+      flexGrow: 1,
+      padding: 15,
   }
 });
 

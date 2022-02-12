@@ -24,7 +24,7 @@ class Passenger(models.Model):
     id = models.AutoField(primary_key=True)
     uid = models.ForeignKey("CarpoolUser", on_delete=models.CASCADE)
     name = models.CharField(max_length=150)
-    current_trip = models.ForeignKey("Trip", null=True, on_delete=models.CASCADE)
+    # current_trip = models.ForeignKey("Trip", null=True, on_delete=models.CASCADE)
 
 # 
 class Trip(models.Model):

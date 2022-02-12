@@ -26,4 +26,4 @@ carpool-app/frontend/web-build/
 # macOS
 carpool-app/frontend/.DS_Store
 
-carpool-app/frontend/.env
+carpool-app/.env
