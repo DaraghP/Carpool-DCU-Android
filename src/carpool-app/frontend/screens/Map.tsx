@@ -12,6 +12,7 @@ import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocomplet
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 
+
 function MapScreen({ role }) {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
@@ -220,7 +221,8 @@ function MapScreen({ role }) {
                                     .map((key) => trips.locations[key].marker.description)} // creates an array of addresses from locations that have type of "waypoint"
                         : undefined)
                         }
-                        onReady={data => {
+                        //optimizeWaypoints={false}
+                        onReady={data => {                             
                             if (data.distance.toFixed(1) < 1) {
                                 setDistance(`${1000 * (data.distance % 1)} m`)
                             }
@@ -285,10 +287,10 @@ function MapScreen({ role }) {
                 <Text color="white">Create Trip</Text>
             </Button>
         }
-
-        {/*<Text>Trip Information:</Text>*/}
-        {/*<Text>Distance: {distance}</Text>*/}
-        {/*<Text>Duration: {duration}</Text>*/}
+        
+        {/* <Text>Trip Information:</Text>
+        <Text>Distance: {distance}</Text>
+        <Text>Duration: {duration}</Text>  */}
         {role === "passenger" &&
             <>
                 <Button onPress={() => {

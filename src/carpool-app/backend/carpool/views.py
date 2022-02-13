@@ -1,4 +1,5 @@
 import json
+import requests
 from django.http import JsonResponse
 from django.core import serializers as django_serializers
 from django.forms.models import model_to_dict
@@ -11,6 +12,8 @@ from rest_framework.response import Response
 
 from .serializers import *
 from .models import *
+from django.conf import settings
+import urllib
 
 # Create your views here.
 #
@@ -186,10 +189,9 @@ def get_trips(request):
 
     if request.method == 'POST':
         passenger = CarpoolUser.objects.get(id=request.user.id)
-        print("Passenger:", passenger)
 
         all_trips = Trip.objects.all()
-        sorted_trips = all_trips.order_by("time_of_departure")
+        sorted_trips = all_trips.order_by("time_of_departure") 
 
         trips_serialized = json.loads(django_serializers.serialize("json", sorted_trips))
 
@@ -197,7 +199,30 @@ def get_trips(request):
             driver_name = Driver.objects.get(id=trips_serialized[index]["fields"]["driver_id"]).name
             trips_serialized[index] = {"pk": trip["pk"], "driver_name": driver_name, **trip["fields"]}
 
+        distance_matrix_base_url = "https://maps.googleapis.com/maps/api/distancematrix/json"
+        directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
+
+        waypoints = "|".join([wp["name"] for wp in trips_serialized[3]['waypoints'].values()])
+
+        distancematrix_url = urllib.parse.quote(f"{distance_matrix_base_url}?destinations={trips_serialized[2]['destination']['name']}|{request.data['start']['name']}&origins={trips_serialized[2]['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
+        directions_url = urllib.parse.quote(f"{directions_base_url}?destination={trips_serialized[3]['destination']['name']}&origin={trips_serialized[3]['start']['name']}&waypoints={waypoints}|{request.data['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
+
+        response = requests.get(directions_url)
+
+
+        for leg in response.json()["routes"][0]["legs"]: 
+            trip_data = {
+                "Start" : leg["start_address"],
+                "Destination" : leg["end_address"],
+                "distance" : leg["distance"]["text"],
+                "duration" : leg["duration"]["text"],
+            }
+
+            # shows distance & duration between waypoints
+            print(trip_data) 
+        
+
         # TODO : make the algorithm to sort the trips
         return Response(trips_serialized, status=status.HTTP_200_OK)
 
-    return Response(status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_400_BAD_REQUEST) # o

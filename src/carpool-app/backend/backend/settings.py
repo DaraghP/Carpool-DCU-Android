@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,12 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'g+)&)x+f%!@b$y_7$jryui3ecx5bt7a1@_a+#@4(bquox_@8ih'
 
-# TODO: add google api key
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["6733-46-7-17-96.ngrok.io", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["b1dc-2001-bb6-6792-1a00-bd58-2017-fcbf-e5e7.ngrok.io", "localhost", "127.0.0.1"]
 
 # Application definition
 
