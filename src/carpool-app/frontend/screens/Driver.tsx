@@ -2,13 +2,16 @@ import {Button, Center, VStack, Heading, Spinner} from "native-base";
 import MapScreen from "./Map"
 import {SafeAreaView} from "react-native";
 import {useRef, useEffect, useState} from "react";
-import {useAppSelector} from "../hooks";
+import {useAppSelector, useAppDispatch} from "../hooks";
 import {FormControl, Input} from "native-base";
+import {updateRole, resetState} from "../reducers/trips-reducer";
 
 
 function DriverScreen({navigation}) {
+    const dispatch = useAppDispatch();
     const backendURL = useAppSelector(state => state.globals.backendURL);
     const user = useAppSelector(state => state.user);
+    const trips = useAppSelector(state => state.trips);
     const [getDriverRequestFinished, setGetDriverRequestFinished] = useState(false);
     const [hasCreatedDriverRole, setHasCreatedDriverRole] = useState(false);
 
@@ -23,6 +26,10 @@ function DriverScreen({navigation}) {
     const [licensePlateText, setLicensePlateText] = useState("");
 
     useEffect(() => {
+        dispatch(resetState());
+    }, [trips.role])
+
+    useEffect(() => { 
         fetch(`${backendURL}/get_driver`, {
           method: "GET",
           headers: {
@@ -30,7 +37,7 @@ function DriverScreen({navigation}) {
               'Content-Type': 'application/json',
               'Authorization': `Token ${user.token}`
           },
-        }).then(response => ({status: response.status})) //
+        }).then(response => ({status: response.status}))
         .then(async (res) => {
             if (res.status === 404) {
                 setHasCreatedDriverRole(false);
@@ -44,6 +51,10 @@ function DriverScreen({navigation}) {
             console.error(e)
         })
     }, [])
+
+    useEffect(() => {
+        dispatch(resetState());
+    }, [trips.role])
 
     const createDriver = () => {
         fetch(`${backendURL}/create_driver`, {
@@ -121,7 +132,7 @@ function DriverScreen({navigation}) {
             }
 
             {getDriverRequestFinished && hasCreatedDriverRole &&
-                <MapScreen role={"driver"}/>
+                <MapScreen/>
             }
 
         </SafeAreaView>

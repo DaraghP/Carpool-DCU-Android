@@ -1,8 +1,8 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import { NativeBaseProvider, Box } from 'native-base';
+import { NativeBaseProvider, Box} from 'native-base';
 import LoginScreen from './screens/Login';
 import RegisterScreen from './screens/Register';
 import HomeScreen from './screens/Home';
@@ -11,7 +11,7 @@ import {useState, useEffect, useMemo, useCallback} from "react";
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {updateGlobalsState} from "./reducers/globals-reducer";
 import {createLocationObj, useAppDispatch, useAppSelector} from "./hooks";
-import {setLocations} from "./reducers/trips-reducer";
+import {updateRole, setLocations} from "./reducers/trips-reducer";
 import PassengerScreen from "./screens/Passenger";
 import DriverScreen from "./screens/Driver";
 
@@ -22,23 +22,12 @@ export default function Index() {
   const user = useAppSelector(state => state.user);
   const globals = useAppSelector(state => state.globals);
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
-  const locations = {
-        startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: 53.1424, lng: -7.6921}),
-        destLocation: createLocationObj("destLocation", "destination", "Destination Point"),
-        waypoint1: createLocationObj("waypoint1", "waypoint", "Waypoint 1"),
-        waypoint2: createLocationObj("waypoint2", "waypoint", "Waypoint 2"),
-        waypoint3: createLocationObj("waypoint3", "waypoint", "Waypoint 3"),
-        waypoint4: createLocationObj("waypoint4", "waypoint", "Waypoint 4"),
-  }
+
 
   useEffect(() => {
-
-    dispatch(updateGlobalsState({backendURL: "http://b1dc-2001-bb6-6792-1a00-bd58-2017-fcbf-e5e7.ngrok.io"}));
-    dispatch(setLocations({
-        ...locations
-    }));
+      dispatch(updateGlobalsState({backendURL: "http://fc71-2001-bb6-6792-1a00-8124-495d-730f-ce5e.ngrok.io"}));
   }, [])
-
+ 
   useEffect(() => {
     if (user.token !== "") {
       setHideAuthTabs(true);
@@ -61,15 +50,25 @@ export default function Index() {
                 />
                 <Tab.Screen name="Passenger" component={PassengerScreen}
                   options={
-                    {tabBarIcon: () => {return <Ionicons name="body" size={25} color="grey"/>;}}
+                    {tabBarIcon: () => {return <Ionicons name="body" size={25} color="grey"/>;}}                    
                   }
+                  listeners={{
+                    tabPress: () => { 
+                      dispatch(updateRole("passenger"));
+                    }
+                  }}
                 />
-                <Tab.Screen name="Driver" component={DriverScreen}
+                <Tab.Screen name="Driver" component={DriverScreen} 
                   options={
-                    {tabBarIcon: () => {return <Ionicons name="car-outline" size={25} color="grey"/>;}}
+                      {tabBarIcon: () => {return <Ionicons name="car-outline" size={25} color="grey"/>}}
                   }
+                  listeners={{
+                    tabPress: () => {
+                      dispatch(updateRole("driver"));
+                    }
+                  }}
                 />
-                <Tab.Screen name="Settings" component={SettingsScreen}
+                <Tab.Screen name="Settings" component={SettingsScreen} 
                   options={
                     {headerShown: false, tabBarIcon: () => {return <Ionicons name="settings-outline" size={25} color={"grey"}/>;}}
                   }

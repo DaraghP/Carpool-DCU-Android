@@ -225,4 +225,4 @@ def get_trips(request):
         # TODO : make the algorithm to sort the trips
         return Response(trips_serialized, status=status.HTTP_200_OK)
 
-    return Response(status=status.HTTP_400_BAD_REQUEST) # o
+    return Response(status=status.HTTP_400_BAD_REQUEST)

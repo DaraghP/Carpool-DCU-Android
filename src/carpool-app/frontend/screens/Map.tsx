@@ -5,15 +5,15 @@ import {v4} from "uuid";
 import {GOOGLE_API_KEY} from "@env";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import {setNumberOfWaypoints} from "../reducers/trips-reducer";
+import {setNumberOfWaypoints, resetState} from "../reducers/trips-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
-import {Button,  Text, Select, Heading, VStack, Flex} from "native-base";
+import {Button, Text, Select, Heading, VStack, Flex} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 
 
-function MapScreen({ role }) {
+function MapScreen() {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
     const user = useAppSelector(state => state.user);
@@ -152,9 +152,12 @@ function MapScreen({ role }) {
         }
     }, [trips.numberOfWaypoints, distance, duration])
 
+    useEffect(() => {
+        console.log(trips.role);
+    }, [trips.role])
 
   return (
-      <View style={styles.container}>
+      <View key={v4()} style={styles.container}>
         <View style={{flex: 1, elevation: -1, zIndex: -1}}>
             <CreateGoogleAutocompleteInput
                 key={v4()}
@@ -174,7 +177,7 @@ function MapScreen({ role }) {
                     if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {
                         return (
                             <CreateGoogleAutocompleteInput
-                                key={key}
+                                key={v4()}
                                 locationObj={trips.locations[key]}
                             />
                         );
@@ -182,7 +185,7 @@ function MapScreen({ role }) {
                 }
             })}
 
-            {role === "driver" &&
+            {trips.role === "driver" &&
               <Button onPress={() => {
                   increaseWaypoints();
               }}>
@@ -262,7 +265,7 @@ function MapScreen({ role }) {
 
                 {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
                     Object.keys(trips.locations).sort().map((key) => {
-                        return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) && <Marker {...trips.locations[key].marker}/>;
+                        return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) && <Marker key={v4()} {...trips.locations[key].marker}/>;
                     }))
                 }
 
@@ -270,17 +273,20 @@ function MapScreen({ role }) {
             </MapView>
         </View>
 
-        {role === "driver" &&
-          <Select placeholder="Choose your number of available seats"
-                  onValueChange={value => setCarAvailableSeats(parseInt(value))}>
-              {[...Array(5).keys()].map((number) => {
-                  return <Select.Item key={`select${number}`} label={`${number}`} value={`${number}`}/>
-              })
-              }
+        {trips.role === "driver" &&
+          <Select key={v4()} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
+              <Select.Item label={`0`} value={`0`}/>
+              <Select.Item label={`1`} value={`1`}/>
+              <Select.Item label={`2`} value={`2`}/>
+              <Select.Item label={`3`} value={`3`}/>
+                {/* {[...Array(5).keys()].map((number) => {
+                return (<Select.Item key={v4()} label={`${number}`} value={`${number}`}/>);
+                })
+                }  */}
           </Select>
         }
 
-        {role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+        {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
             <Button onPress={() => {
                 createTrip();
             }}>
@@ -291,13 +297,16 @@ function MapScreen({ role }) {
         {/* <Text>Trip Information:</Text>
         <Text>Distance: {distance}</Text>
         <Text>Duration: {duration}</Text>  */}
-        {role === "passenger" &&
+        {trips.role === "passenger" &&
             <>
                 <Button onPress={() => {
                     openPanel();
                     searchTrips();
-                }}>Show Trips</Button>
+                }}>
+                    Show Trips
+                </Button>
                 <SwipeablePanel
+                    key={v4()}
                     scrollViewProps={{style: {padding: 10}}}
                     fullWidth={true}
                     openLarge={true}
@@ -316,14 +325,14 @@ function MapScreen({ role }) {
                     {tripsFound !== null &&
                         Object.keys(tripsFound).map((tripKey) => {
                             return (
-                                <TouchableOpacity key={`trip${tripKey}`} style={styles.tripButton}>
-                                    <Flex direction="row" wrap="wrap">
-                                        <VStack maxWidth="75%">
-                                            <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
-                                            <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                                            <Text>{tripsFound[tripKey].time_of_departure}</Text>
+                                <TouchableOpacity key={v4()} style={styles.tripButton}>
+                                    <Flex key={v4()} direction="row" wrap="wrap">
+                                        <VStack key={v4()} maxWidth="75%">
+                                            <Text key={v4()} style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
+                                            <Text key={v4()}>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
+                                            <Text key={v4()}>{tripsFound[tripKey].time_of_departure}</Text>
                                         </VStack>
-                                        <Button style={{flexDirection: "row", marginLeft: "auto"}} onPress={() => {
+                                        <Button key={v4()} style={{flexDirection: "row", marginLeft: "auto"}} onPress={() => {
                                             console.log("Trip requested.");
                                         }}>
                                             Request
