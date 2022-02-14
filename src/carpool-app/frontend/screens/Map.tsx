@@ -7,10 +7,11 @@ import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import {setNumberOfWaypoints, resetState} from "../reducers/trips-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
-import {Button, Text, Select, Heading, VStack, Flex} from "native-base";
+import {Button, Text, Select, Heading, VStack, Flex, Icon} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 
 function MapScreen() {
@@ -27,6 +28,11 @@ function MapScreen() {
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
+
+    // const [showComponent, setShowComponent] = useState(true);
+    // useEffect(()=>()=>{
+    //     setShowComponent(false)
+    // },[])
 
     const openPanel = () => {
         setIsPanelActive(true);
@@ -156,6 +162,7 @@ function MapScreen() {
         console.log(trips.role);
     }, [trips.role])
 
+
   return (
       <View key={v4()} style={styles.container}>
         <View style={{flex: 1, elevation: -1, zIndex: -1}}>
@@ -171,7 +178,6 @@ function MapScreen() {
                 locationObj={trips.locations.destLocation}
                 placeholder="Enter your destination..."
             />
-
               {Object.keys(trips.locations).sort().map((key) => {
                 if (trips.locations[key].type === "waypoint") {
                     if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {
@@ -274,15 +280,11 @@ function MapScreen() {
         </View>
 
         {trips.role === "driver" &&
-          <Select key={v4()} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
-              <Select.Item label={`0`} value={`0`}/>
-              <Select.Item label={`1`} value={`1`}/>
-              <Select.Item label={`2`} value={`2`}/>
-              <Select.Item label={`3`} value={`3`}/>
-                {/* {[...Array(5).keys()].map((number) => {
-                return (<Select.Item key={v4()} label={`${number}`} value={`${number}`}/>);
-                })
-                }  */}
+          <Select key={v4()} dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
+                {[...Array(5).keys()].map((number) => {
+                        return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
+                    })
+                }
           </Select>
         }
 
@@ -326,13 +328,13 @@ function MapScreen() {
                         Object.keys(tripsFound).map((tripKey) => {
                             return (
                                 <TouchableOpacity key={v4()} style={styles.tripButton}>
-                                    <Flex key={v4()} direction="row" wrap="wrap">
-                                        <VStack key={v4()} maxWidth="75%">
-                                            <Text key={v4()} style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
-                                            <Text key={v4()}>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                                            <Text key={v4()}>{tripsFound[tripKey].time_of_departure}</Text>
+                                    <Flex direction="row" wrap="wrap">
+                                        <VStack maxWidth="75%">
+                                            <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
+                                            <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
+                                            <Text>{tripsFound[tripKey].time_of_departure}</Text>
                                         </VStack>
-                                        <Button key={v4()} style={{flexDirection: "row", marginLeft: "auto"}} onPress={() => {
+                                        <Button style={{flexDirection: "row", marginLeft: "auto"}} onPress={() => {
                                             console.log("Trip requested.");
                                         }}>
                                             Request

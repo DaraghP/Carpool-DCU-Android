@@ -13,9 +13,18 @@ const CreateGoogleAutocompleteInput = ({locationObj, placeholder = "Enter a wayp
     const trips = useAppSelector(state => state.trips);
     const markerRef = useRef<GooglePlacesAutocomplete>();
 
+    const [isMounted, setIsMounted] = useState(false);
+
     useEffect(() => {
         markerRef.current?.setAddressText(locationObj.marker.description);
     }, [trips.numberOfWaypoints])
+
+    useEffect(() => {
+        setIsMounted(true);
+        return () => {
+            setIsMounted(false);
+        }
+    }, [])
 
     const deleteWaypoint = (waypoint) => {
         let waypointNum = parseInt(waypoint.key.charAt(waypoint.key.length - 1));
@@ -98,54 +107,54 @@ const CreateGoogleAutocompleteInput = ({locationObj, placeholder = "Enter a wayp
         }}));
     }
 
-
     return (
-        <GooglePlacesAutocomplete
-            key={locationObj.key}
-            ref={markerRef}
-            placeholder={placeholder}
-            listViewDisplayed={markerRef.current?.getAddressText() !== ""}
-            renderRightButton={() =>
-                <>
-                    <TouchableOpacity
-                        onPress={() => {
-                            markerRef.current?.setAddressText("");
-                        }}
-                    >
-                        <Center>
-                            <Ionicons style={{marginRight: 5}} color={markerRef.current?.getAddressText() !== "" ? "black" : "#c8c7cc"} name="close-circle-outline" size={25} />
-                        </Center>
-                    </TouchableOpacity>
-
-                    {locationObj.type === "waypoint" &&
+        isMounted &&
+            <GooglePlacesAutocomplete
+                key={locationObj.key}
+                ref={markerRef}
+                placeholder={placeholder}
+                listViewDisplayed={markerRef.current?.getAddressText() !== ""}
+                renderRightButton={() =>
+                    <>
                         <TouchableOpacity
                             onPress={() => {
-                                deleteWaypoint(locationObj)
+                                markerRef.current?.setAddressText("");
                             }}
                         >
                             <Center>
-                                <Ionicons style={{marginRight: 5}} color="red" name="remove-circle" size={25} />
+                                <Ionicons style={{marginRight: 5}} color={markerRef.current?.getAddressText() !== "" ? "black" : "#c8c7cc"} name="close-circle-outline" size={25} />
                             </Center>
                         </TouchableOpacity>
-                    }
-                </>
-            }
-            styles={{container: {flex: 0}, textInput: {fontSize: 20}}} //
-            query={{
-                key: GOOGLE_API_KEY,
-                language: "en",
-                components: "country:ie"
-            }}
-            nearbyPlacesAPI="GooglePlacesSearch"
-            returnKeyType="search"
-            debounce={400}
-            minLength={2}
-            enablePoweredByContainer={false}
-            onPress={(data, details = null) => {
-                handlePlacesResp(locationObj, data, details)
-            }}
-            fetchDetails={true}
-        />
+
+                        {locationObj.type === "waypoint" &&
+                            <TouchableOpacity
+                                onPress={() => {
+                                    deleteWaypoint(locationObj)
+                                }}
+                            >
+                                <Center>
+                                    <Ionicons style={{marginRight: 5}} color="red" name="remove-circle" size={25} />
+                                </Center>
+                            </TouchableOpacity>
+                        }
+                    </>
+                }
+                styles={{container: {flex: 0}, textInput: {fontSize: 20}}} //
+                query={{
+                    key: GOOGLE_API_KEY,
+                    language: "en",
+                    components: "country:ie"
+                }}
+                nearbyPlacesAPI="GooglePlacesSearch"
+                returnKeyType="search"
+                debounce={400}
+                minLength={2}
+                enablePoweredByContainer={false}
+                onPress={(data, details = null) => {
+                    handlePlacesResp(locationObj, data, details)
+                }}
+                fetchDetails={true}
+            />
     );
 };
 

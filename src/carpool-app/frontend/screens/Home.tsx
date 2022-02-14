@@ -53,7 +53,7 @@ function HomeScreen({ navigation }) {
                         <Button width="50%" height="350%" onPress = {() => {
                             console.log("Passenger role selected"); 
                             createPassenger();
-                            dispatch(updateRole("passenger")); 
+                            dispatch(updateRole("passenger"));
                             navigation.navigate("Passenger")
                         }}>
                             <Ionicons style={{textAlign: "center"}} name="body" size={80} color="white"/>
