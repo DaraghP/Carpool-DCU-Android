@@ -35,7 +35,7 @@ function LoginScreen({ navigation }) {
             passwordInput.current.clear();
 
             // navigates to home screen once globals.user.token updates
-            dispatch(updateUserState({username: usernameText, token: res.token}));
+            dispatch(updateUserState({id: res.id, username: usernameText, token: res.token}));
 
             setErrorFound(false);
         }

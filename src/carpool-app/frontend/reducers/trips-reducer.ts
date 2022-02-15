@@ -13,7 +13,8 @@ const locations = {
     waypoint3: createLocationObj("waypoint3", "waypoint", "Waypoint 3"),
     waypoint4: createLocationObj("waypoint4", "waypoint", "Waypoint 4"),
 } 
-// try now maybe
+
+
 const initialState = {
     role: "",
     locations: locations,

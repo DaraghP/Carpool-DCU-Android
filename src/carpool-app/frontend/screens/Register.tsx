@@ -51,8 +51,7 @@ function RegisterScreen({ navigation }) {
 
             // prevents memory leak
             if (mounted.current) {
-                console.log(res.token);
-                dispatch(updateUserState({username: res.username, token: res.token}));
+                dispatch(updateUserState({id: res.id, username: res.username, token: res.token}));
             }
 
             setErrorType("");

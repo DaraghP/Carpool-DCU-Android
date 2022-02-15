@@ -12,6 +12,7 @@ import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocomplet
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {storeTripRequest} from "../App";
 
 
 function MapScreen() {
@@ -29,10 +30,9 @@ function MapScreen() {
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
 
-    // const [showComponent, setShowComponent] = useState(true);
-    // useEffect(()=>()=>{
-    //     setShowComponent(false)
-    // },[])
+    const [isTripCreated, setIsTripCreated] = useState(false);
+
+    const [isMounted, setIsMounted] = useState(false);
 
     const openPanel = () => {
         setIsPanelActive(true);
@@ -98,7 +98,8 @@ function MapScreen() {
         }).then(response => response.json())
         .then(res => {
             if (!("errorType" in res)) {
-                console.log(res);
+                console.log("TRIP CREATED");
+                setIsTripCreated(true);
             }
             else {
                 console.log(res.errorType, res.errorMessage);
@@ -144,6 +145,12 @@ function MapScreen() {
         })
     }
 
+    const cancelTrip = () => {
+        console.log("Trip Cancelled.");
+        // alert "are you sure" then delete from db
+        setIsTripCreated(false);
+    }
+
     useEffect(() => {
         if (mapRef.current) {
             setTimeout(() => {
@@ -154,199 +161,244 @@ function MapScreen() {
                 if (trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) {
                     mapRef.current.fitToSuppliedMarkers(markers, {animated: true});
                 }
-            }, 100)
+            }, 300)
         }
     }, [trips.numberOfWaypoints, distance, duration])
 
     useEffect(() => {
         console.log(trips.role);
-    }, [trips.role])
 
+    }, [trips.role])
 
   return (
       <View key={v4()} style={styles.container}>
-        <View style={{flex: 1, elevation: -1, zIndex: -1}}>
-            <CreateGoogleAutocompleteInput
-                key={v4()}
-                locationObj={trips.locations.startingLocation}
-                placeholder="Enter your starting point..."
-                style={{rounded: 5}}
-            />
 
-            <CreateGoogleAutocompleteInput
-                key={v4()}
-                locationObj={trips.locations.destLocation}
-                placeholder="Enter your destination..."
-            />
-              {Object.keys(trips.locations).sort().map((key) => {
-                if (trips.locations[key].type === "waypoint") {
-                    if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {
-                        return (
-                            <CreateGoogleAutocompleteInput
-                                key={v4()}
-                                locationObj={trips.locations[key]}
-                            />
-                        );
-                    }
-                }
-            })}
+              <View style={{flex: 1, elevation: -1, zIndex: -1}}>
+                  {!isTripCreated &&
+                      <>
+                          <CreateGoogleAutocompleteInput
+                              key={v4()}
+                              locationObjName={"startingLocation"}
+                              placeholder="Enter your starting point..."
+                              style={{rounded: 5}}
+                          />
 
-            {trips.role === "driver" &&
-              <Button onPress={() => {
-                  increaseWaypoints();
-              }}>
-                  <Text color="white">Add waypoint</Text>
-              </Button>
-            }
+                          <CreateGoogleAutocompleteInput
+                              key={v4()}
+                              locationObjName={"destLocation"}
+                              placeholder="Enter your destination..."
+                          />
 
-            <Button onPress={() => {setTimePickerVisibility(true)}}>
-                Select time of departure
-            </Button>
+                          {Object.keys(trips.locations).sort().map((key) => {
+                              if (trips.locations[key].type === "waypoint") {
+                                  if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {
+                                      return (
+                                          <CreateGoogleAutocompleteInput
+                                              key={v4()}
+                                              locationObjName={key}
+                                          />
+                                      );
+                                  }
+                              }
+                          })}
 
-            <DateTimePickerModal
-                mode="time"
-                isVisible={isTimePickerVisible}
-                onConfirm={(time) => {console.log("Time selected:", time); setTimeOfDeparture(time); setTimePickerVisibility(false)}}
-                onCancel={() => {setTimePickerVisibility(false)}}
-            />
+                          {trips.role === "driver" &&
+                              <Button onPress={() => {
+                                  increaseWaypoints();
+                              }}>
+                                  <Text color="white">Add waypoint</Text>
+                              </Button>
+                          }
 
-            <MapView
-                ref={mapRef}
-                style={{flex: 1}}
-                region={{
-                    latitude: trips.locations.startingLocation.info.coords.lat,
-                    longitude: trips.locations.startingLocation.info.coords.lng,
-                    latitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
-                    longitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
-                }}
-            >
-                {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
+                          <Button onPress={() => {
+                              setTimePickerVisibility(true);
+                          }}>
+                              Select time of departure
+                          </Button>
 
-                    <MapViewDirections
-                        origin={trips.locations.startingLocation.marker.description}
-                        destination={trips.locations.destLocation.marker.description}
-                        {...(trips.numberOfWaypoints > 0 ?
-                        {waypoints: Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
-                                    .map((key) => trips.locations[key].marker.description)} // creates an array of addresses from locations that have type of "waypoint"
-                        : undefined)
-                        }
-                        //optimizeWaypoints={false}
-                        onReady={data => {                             
-                            if (data.distance.toFixed(1) < 1) {
-                                setDistance(`${1000 * (data.distance % 1)} m`)
-                            }
-                            else {
-                                setDistance(`${data.distance.toFixed(1)} km`);
-                            }
+                          <DateTimePickerModal
+                              mode="time"
+                              isVisible={isTimePickerVisible}
+                              onConfirm={(time) => {
+                                  console.log("Time selected:", time);
+                                  setTimeOfDeparture(time);
+                                  setTimePickerVisibility(false);
+                              }}
+                              onCancel={() => {
+                                  setTimePickerVisibility(false);
+                              }}/>
+                      </>
+                  }
+                      <MapView
+                      ref={mapRef}
+                      style={{flex: 1}}
+                      region={{
+                      latitude: trips.locations.startingLocation.info.coords.lat,
+                      longitude: trips.locations.startingLocation.info.coords.lng,
+                      latitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
+                      longitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
+                  }}
+                      >
+                  {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
 
-                            let hoursDecimal = (data.duration / 60);
-                            let hours = Math.floor(hoursDecimal);
+                      <MapViewDirections
+                      origin={trips.locations.startingLocation.marker.description}
+                      destination={trips.locations.destLocation.marker.description}
+                  {...(trips.numberOfWaypoints > 0 ?
+                  {
+                      waypoints: Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
+                      .map((key) => trips.locations[key].marker.description)
+                  } // creates an array of addresses from locations that have type of "waypoint"
+                      : undefined)
+                  }
+                      //optimizeWaypoints={false}
+                      onReady={data => {
+                      if (data.distance.toFixed(1) < 1) {
+                      setDistance(`${1000 * (data.distance % 1)} m`)
+                  } else {
+                      setDistance(`${data.distance.toFixed(1)} km`);
+                  }
 
-                            let minutes = 60 * (hoursDecimal % 1);
+                      let hoursDecimal = (data.duration / 60);
+                      let hours = Math.floor(hoursDecimal);
 
-                            if (data.duration.toFixed(0) < 60) {
-                                setDuration(`${minutes.toFixed(0)} min`);
-                            }
-                            else if (data.duration.toFixed(0) % 60 === 0) {
-                                setDuration(`${hours} hr`);
-                            }
-                            else {
-                                setDuration(`${hours} hr ${minutes.toFixed(0)} min`);
-                            }
-                        }}
-                        apikey={GOOGLE_API_KEY}
-                        strokeWidth={3}
-                        strokeColor="black"
-                    />
+                      let minutes = 60 * (hoursDecimal % 1);
 
-                )}
+                      if (data.duration.toFixed(0) < 60) {
+                      setDuration(`${minutes.toFixed(0)} min`);
+                  } else if (data.duration.toFixed(0) % 60 === 0) {
+                      setDuration(`${hours} hr`);
+                  } else {
+                      setDuration(`${hours} hr ${minutes.toFixed(0)} min`);
+                  }
+                  }}
+                      apikey={GOOGLE_API_KEY}
+                      strokeWidth={3}
+                      strokeColor="black"
+                      />
 
-                {trips.locations.startingLocation.info.isEntered && (
-                    <Marker {...trips.locations.startingLocation.marker}/>
-                )}
+                      )}
 
-                {trips.locations.destLocation.info.isEntered && (
-                    <Marker {...trips.locations.destLocation.marker}/>
-                )}
+                  {trips.locations.startingLocation.info.isEntered && (
+                      <Marker {...trips.locations.startingLocation.marker}/>
+                      )}
 
-                {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
-                    Object.keys(trips.locations).sort().map((key) => {
-                        return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) && <Marker key={v4()} {...trips.locations[key].marker}/>;
-                    }))
-                }
+                  {trips.locations.destLocation.info.isEntered && (
+                      <Marker {...trips.locations.destLocation.marker}/>
+                      )}
+
+                  {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
+                      Object.keys(trips.locations).sort().map((key) => {
+                      return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) &&
+                      <Marker key={v4()} {...trips.locations[key].marker}/>;
+                  }))
+                  }
 
 
-            </MapView>
-        </View>
+                      </MapView>
+              </View>
 
-        {trips.role === "driver" &&
-          <Select key={v4()} dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
-                {[...Array(5).keys()].map((number) => {
-                        return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
-                    })
-                }
-          </Select>
-        }
+                  
+          {trips.role === "driver" && !isTripCreated &&
+              <Select key={v4()} dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
+                  {[...Array(5).keys()].map((number) => {
+                      return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
+                  })
+                  }
+              </Select>
+          }
 
-        {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
-            <Button onPress={() => {
-                createTrip();
-            }}>
+          {trips.role === "driver" && !isTripCreated &&
+              <Select key={v4()} dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
+                  {[...Array(5).keys()].map((number) => {
+                      return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
+                  })
+                  }
+              </Select>
+          }
+
+          {trips.role === "driver" && !isTripCreated && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+              <Button onPress={() => {createTrip();}}>
                 <Text color="white">Create Trip</Text>
-            </Button>
-        }
-        
-        {/* <Text>Trip Information:</Text>
-        <Text>Distance: {distance}</Text>
-        <Text>Duration: {duration}</Text>  */}
-        {trips.role === "passenger" &&
-            <>
-                <Button onPress={() => {
-                    openPanel();
-                    searchTrips();
-                }}>
-                    Show Trips
-                </Button>
-                <SwipeablePanel
-                    key={v4()}
-                    scrollViewProps={{style: {padding: 10}}}
-                    fullWidth={true}
-                    openLarge={true}
-                    closeOnTouchOutside={true}
-                    isActive={isPanelActive}
-                    showCloseButton={true}
-                    onPressCloseButton={() => {
+              </Button>
+          }
+
+          {/* <Text>Trip Information:</Text>
+              <Text>Distance: {distance}</Text>
+              <Text>Duration: {duration}</Text>  */}
+          {trips.role === "passenger" &&
+              <>
+                  <Button onPress={() => {
+                      openPanel();
+                      searchTrips();
+                  }}>
+                      Show Trips
+                  </Button>
+                  <SwipeablePanel
+                      key={v4()}
+                      scrollViewProps={{style: {padding: 10}}}
+                      fullWidth={true}
+                      openLarge={true}
+                      closeOnTouchOutside={true}
+                      isActive={isPanelActive}
+                      showCloseButton={true}
+                      onPressCloseButton={() => {
                         closePanel();
-                    }}
-                    onClose={() => {
+                      }}
+                      onClose={() => {
                         setIsPanelActive(false);
-                    }}
-                >
-                    <Heading mb={2}>Nearby Drivers</Heading>
+                      }}
+                  >
+                  <Heading mb={2}>Nearby Drivers</Heading>
 
-                    {tripsFound !== null &&
-                        Object.keys(tripsFound).map((tripKey) => {
-                            return (
-                                <TouchableOpacity key={v4()} style={styles.tripButton}>
-                                    <Flex direction="row" wrap="wrap">
-                                        <VStack maxWidth="75%">
-                                            <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
-                                            <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                                            <Text>{tripsFound[tripKey].time_of_departure}</Text>
-                                        </VStack>
-                                        <Button style={{flexDirection: "row", marginLeft: "auto"}} onPress={() => {
-                                            console.log("Trip requested.");
-                                        }}>
-                                            Request
-                                        </Button>
-                                    </Flex>
-                                </TouchableOpacity>
-                            );
-                        })}
+                  {tripsFound !== null &&
+                      Object.keys(tripsFound).map((tripKey) => {
+                          return (
+                              <TouchableOpacity key={v4()} style={styles.tripButton}>
+                                  <Flex direction="row" wrap="wrap">
+                                      <VStack maxWidth="75%">
+                                          <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
+                                          <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
+                                          <Text>{tripsFound[tripKey].time_of_departure}</Text>
+                                      </VStack>
+                                      <Button style={{flexDirection: "row", marginLeft: "auto"}}
+                                              onPress={() => {
+                                                console.log("Trip requested.");
+                                                console.log("trip_id:", tripsFound[tripKey].pk);
+                                                console.log("passenger_id:", user.id);
+                                                storeTripRequest(tripsFound[tripKey].pk, user.id);
+                                              }
+                                      }>
+                                        Request
+                                      </Button>
+                                  </Flex>
+                              </TouchableOpacity>
+                          );
+                      }
+                  )}
 
-                </SwipeablePanel>
-            </>
-        }
+                  </SwipeablePanel>
+              </>
+          }
+
+          {isTripCreated &&
+              <View style={{padding: 10}}>
+                  <Heading mb={2}>Current Trip</Heading>
+                  <Heading size="md">From:</Heading>
+                  <Text>{trips.locations.startingLocation.marker.description}</Text>
+                  <Text>To: {trips.locations.destLocation.marker.description}</Text>
+                  <Text>Departure Time:</Text>
+                  <Text style={{fontWeight: "bold"}}>{timeOfDeparture.toLocaleTimeString().slice(0, 5)} {timeOfDeparture.toLocaleDateString()}</Text>
+
+                  <Text>ETA: </Text>{/* timeofDeparture + duration*/}
+                  <Text>Passengers: Empty Seat x {carAvailableSeats}</Text>
+                  <Button>Passenger Requests +1</Button>
+                  <Button>View Route</Button>
+                  <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
+                  <Button>Trip Complete</Button>
+              </View>
+          }
+
       </View>
   )
 }

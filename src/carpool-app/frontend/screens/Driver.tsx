@@ -27,7 +27,7 @@ function DriverScreen({navigation}) {
 
     useEffect(() => {
         dispatch(resetState());
-    }, [trips.role])
+    }, [])
 
     useEffect(() => { 
         fetch(`${backendURL}/get_driver`, {

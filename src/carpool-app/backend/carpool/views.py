@@ -43,7 +43,7 @@ def register(request):
                 temp_user = carpool_user.create(request.data)
                 token = Token.objects.create(user=temp_user)
 
-                user_data = {"username": temp_user.username, "token": token.key}
+                user_data = {"id": temp_user.id, "username": temp_user.username, "token": token.key}
                 django_login(request, temp_user)
 
                 return Response(user_data, status=status.HTTP_201_CREATED)
@@ -175,7 +175,7 @@ def create_trip(request):
         driver = Driver.objects.get(uid=request.user.id)
         trip = TripSerializer({"driver_id": driver, **request.data})
         trip.create({"driver_id": driver, **request.data})
-        return Response(status=status.HTTP_200_OK)
+        return Response({"status": "trip created"}, status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -209,18 +209,16 @@ def get_trips(request):
 
         response = requests.get(directions_url)
 
-
-        for leg in response.json()["routes"][0]["legs"]: 
+        for leg in response.json()["routes"][0]["legs"]:
             trip_data = {
-                "Start" : leg["start_address"],
-                "Destination" : leg["end_address"],
-                "distance" : leg["distance"]["text"],
-                "duration" : leg["duration"]["text"],
+               "Start" : leg["start_address"], #
+               "Destination" : leg["end_address"],
+               "distance" : leg["distance"]["text"],
+               "duration" : leg["duration"]["text"],
             }
 
             # shows distance & duration between waypoints
-            print(trip_data) 
-        
+            print(trip_data)
 
         # TODO : make the algorithm to sort the trips
         return Response(trips_serialized, status=status.HTTP_200_OK)
