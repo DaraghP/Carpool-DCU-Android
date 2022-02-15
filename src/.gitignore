@@ -10,9 +10,9 @@ carpool-app/backend/db.sqlite3
 .idea/
 ../venv/
 
-
 carpool-app/frontend/node_modules/
 carpool-app/frontend/.expo/
+carpool-app/frontend/.env/
 carpool-app/frontend/dist/
 carpool-app/frontend/npm-debug.*
 carpool-app/frontend/*.jks
