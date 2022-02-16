@@ -4,7 +4,7 @@ import {SafeAreaView} from "react-native";
 import {useRef, useEffect, useState} from "react";
 import {useAppSelector, useAppDispatch} from "../hooks";
 import {FormControl, Input} from "native-base";
-import {updateRole, resetState} from "../reducers/trips-reducer";
+import {updateRole, resetTripState} from "../reducers/trips-reducer";
 
 
 function DriverScreen({navigation}) {
@@ -26,10 +26,7 @@ function DriverScreen({navigation}) {
     const [licensePlateText, setLicensePlateText] = useState("");
 
     useEffect(() => {
-        dispatch(resetState());
-    }, [])
-
-    useEffect(() => { 
+        dispatch(resetTripState());
         fetch(`${backendURL}/get_driver`, {
           method: "GET",
           headers: {
@@ -52,8 +49,9 @@ function DriverScreen({navigation}) {
         })
     }, [])
 
+
     useEffect(() => {
-        dispatch(resetState());
+        dispatch(resetTripState());
     }, [trips.role])
 
     const createDriver = () => {

@@ -1,6 +1,7 @@
 import {TypedUseSelectorHook, useDispatch, useSelector} from "react-redux";
 import {AppDispatch, RootState} from "./store";
-import { Marker } from "react-native-maps";
+import {getDatabase, ref, set, onValue, child, push, update} from "firebase/database";
+import {updateStatus} from "./reducers/user-reducer";
 
 
 // redux typescript hooks
@@ -34,4 +35,34 @@ export const createLocationObj = (key: string, type: string, typeTitle: string, 
                      }
         }
     )
+}
+
+// firebase
+export function createFirebaseTrip(status, tripID, driverID) {
+
+    if (status === "available") {
+        const db = getDatabase();
+        const reference = ref(db, `trips/${tripID}`)
+        set(reference, {
+            driverID: driverID,
+            passengers: {},
+        })
+
+        return true;
+    }
+
+    return false;
+}
+
+export function storeTripRequest(tripID, passengerID) {
+    const db = getDatabase();
+    update(ref(db), {[`/trips/${tripID}/passengers/${passengerID}`]: {passengerId: passengerID}});
+}
+
+export function setupTripRequestListener(tripId) {
+    const db = getDatabase();
+    const reference = ref(db, `trips/${tripId}`);
+    onValue(reference, (snapshot) => {
+        console.log(snapshot);
+    })
 }

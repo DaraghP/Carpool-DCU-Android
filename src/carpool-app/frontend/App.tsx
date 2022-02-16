@@ -1,9 +1,11 @@
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, onValue } from "firebase/database";
-import { FIREBASE_API_KEY } from "@env";
+import { LogBox } from "react-native";
+import {initializeApp} from "firebase/app";
+import {FIREBASE_API_KEY} from "@env";
 import {Provider} from "react-redux";
 import {store} from "./store";
 import Index from "./index";
+
+LogBox.ignoreLogs(["Setting a timer"])
 
 const firebaseConfig = {
   apiKey: FIREBASE_API_KEY,
@@ -16,15 +18,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
-export function storeTripRequest(tripId, passengerId) {
-    const db = getDatabase();
-    const reference = ref(db, 'trips/' + tripId);
-    set(reference, {
-        passengerID: passengerId,
-    });
-
-}
 
 export default function App() {
   return (

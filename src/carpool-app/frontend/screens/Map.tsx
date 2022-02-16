@@ -5,15 +5,14 @@ import {v4} from "uuid";
 import {GOOGLE_API_KEY} from "@env";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import {setNumberOfWaypoints, resetState} from "../reducers/trips-reducer";
-import {useAppDispatch, useAppSelector} from "../hooks";
+import {updateStatus} from "../reducers/user-reducer";
+import {setNumberOfWaypoints, resetTripState} from "../reducers/trips-reducer";
+import {storeTripRequest, setupTripRequestListener, useAppDispatch, useAppSelector, createFirebaseTrip} from "../hooks";
 import {Button, Text, Select, Heading, VStack, Flex, Icon} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import {storeTripRequest} from "../App";
-
 
 function MapScreen() {
     const dispatch = useAppDispatch();
@@ -26,13 +25,17 @@ function MapScreen() {
     const [duration, setDuration] = useState("");
     const [timeOfDeparture, setTimeOfDeparture] = useState<Date>(new Date());
     const [carAvailableSeats, setCarAvailableSeats] = useState(0);
+    const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null});
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
 
     const [isTripCreated, setIsTripCreated] = useState(false);
 
-    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        const {tripID} = firebaseTripsVal;
+        setupTripRequestListener(tripID);
+    }, [firebaseTripsVal])
 
     const openPanel = () => {
         setIsPanelActive(true);
@@ -86,25 +89,33 @@ function MapScreen() {
             distance: distance,
             time_of_departure: timeOfDeparture,
         };
-       
-        fetch(`${backendURL}/create_trip`, {
-            method: "POST",
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Token ${user.token}`
-            },
-            body: JSON.stringify(trip_data)
-        }).then(response => response.json())
-        .then(res => {
-            if (!("errorType" in res)) {
-                console.log("TRIP CREATED");
-                setIsTripCreated(true);
-            }
-            else {
-                console.log(res.errorType, res.errorMessage);
-            }
-        })
+
+        console.log(user.status)
+        if (user.status === "available") {
+            fetch(`${backendURL}/create_trip`, {
+                method: "POST",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${user.token}`
+                },
+                body: JSON.stringify(trip_data)
+            }).then(response => response.json())
+                .then(res => {
+                    if (!("errorType" in res)) {
+                        console.log("TRIP CREATED");
+                        let isFirebaseTripCreated = createFirebaseTrip(user.status, res.tripID, res.driverID);
+                        if (isFirebaseTripCreated) {
+                            dispatch(updateStatus("busy"));
+                        }
+                        console.log(isFirebaseTripCreated);
+                        setFirebaseTripsVal({tripID: res.tripID, driverID: res.driverID});
+                        setIsTripCreated(true);
+                    } else {
+                        console.log(res.errorType, res.errorMessage);
+                    } //
+                })
+        }
     }
 
     // for passenger only
@@ -149,6 +160,7 @@ function MapScreen() {
         console.log("Trip Cancelled.");
         // alert "are you sure" then delete from db
         setIsTripCreated(false);
+        dispatch(updateStatus("available"));
     }
 
     useEffect(() => {
@@ -229,7 +241,7 @@ function MapScreen() {
                               }}/>
                       </>
                   }
-                      <MapView
+                  <MapView
                       ref={mapRef}
                       style={{flex: 1}}
                       region={{
@@ -238,76 +250,66 @@ function MapScreen() {
                       latitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
                       longitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
                   }}
-                      >
+                  >
                   {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
 
                       <MapViewDirections
                       origin={trips.locations.startingLocation.marker.description}
                       destination={trips.locations.destLocation.marker.description}
-                  {...(trips.numberOfWaypoints > 0 ?
-                  {
-                      waypoints: Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
-                      .map((key) => trips.locations[key].marker.description)
-                  } // creates an array of addresses from locations that have type of "waypoint"
-                      : undefined)
-                  }
-                      //optimizeWaypoints={false}
-                      onReady={data => {
-                      if (data.distance.toFixed(1) < 1) {
-                      setDistance(`${1000 * (data.distance % 1)} m`)
-                  } else {
-                      setDistance(`${data.distance.toFixed(1)} km`);
-                  }
+                      {...(trips.numberOfWaypoints > 0 ?
+                      {
+                          waypoints: Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
+                          .map((key) => trips.locations[key].marker.description)
+                      } // creates an array of addresses from locations that have type of "waypoint"
+                          : undefined)
+                      }
+                          //optimizeWaypoints={false}
+                          onReady={data => {
+                          if (data.distance.toFixed(1) < 1) {
+                          setDistance(`${1000 * (data.distance % 1)} m`)
+                      } else {
+                          setDistance(`${data.distance.toFixed(1)} km`);
+                      }
 
-                      let hoursDecimal = (data.duration / 60);
-                      let hours = Math.floor(hoursDecimal);
+                          let hoursDecimal = (data.duration / 60);
+                          let hours = Math.floor(hoursDecimal);
 
-                      let minutes = 60 * (hoursDecimal % 1);
+                          let minutes = 60 * (hoursDecimal % 1);
 
-                      if (data.duration.toFixed(0) < 60) {
-                      setDuration(`${minutes.toFixed(0)} min`);
-                  } else if (data.duration.toFixed(0) % 60 === 0) {
-                      setDuration(`${hours} hr`);
-                  } else {
-                      setDuration(`${hours} hr ${minutes.toFixed(0)} min`);
-                  }
-                  }}
-                      apikey={GOOGLE_API_KEY}
-                      strokeWidth={3}
-                      strokeColor="black"
-                      />
+                          if (data.duration.toFixed(0) < 60) {
+                          setDuration(`${minutes.toFixed(0)} min`);
+                      } else if (data.duration.toFixed(0) % 60 === 0) {
+                          setDuration(`${hours} hr`);
+                      } else {
+                          setDuration(`${hours} hr ${minutes.toFixed(0)} min`);
+                      }
+                      }}
+                          apikey={GOOGLE_API_KEY}
+                          strokeWidth={3}
+                          strokeColor="black"
+                          />
 
-                      )}
+                          )}
 
-                  {trips.locations.startingLocation.info.isEntered && (
-                      <Marker {...trips.locations.startingLocation.marker}/>
-                      )}
+                      {trips.locations.startingLocation.info.isEntered && (
+                          <Marker {...trips.locations.startingLocation.marker}/>
+                          )}
 
-                  {trips.locations.destLocation.info.isEntered && (
-                      <Marker {...trips.locations.destLocation.marker}/>
-                      )}
+                      {trips.locations.destLocation.info.isEntered && (
+                          <Marker {...trips.locations.destLocation.marker}/>
+                          )}
 
-                  {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
-                      Object.keys(trips.locations).sort().map((key) => {
-                      return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) &&
-                      <Marker key={v4()} {...trips.locations[key].marker}/>;
-                  }))
-                  }
+                      {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
+                          Object.keys(trips.locations).sort().map((key) => {
+                              return (trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered) && <Marker key={v4()} {...trips.locations[key].marker}/>;
+                          }))
+                      }
 
 
-                      </MapView>
+                  </MapView>
               </View>
 
                   
-          {trips.role === "driver" && !isTripCreated &&
-              <Select key={v4()} dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
-                  {[...Array(5).keys()].map((number) => {
-                      return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
-                  })
-                  }
-              </Select>
-          }
-
           {trips.role === "driver" && !isTripCreated &&
               <Select key={v4()} dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>} placeholder="Choose your number of available seats" onValueChange={value => setCarAvailableSeats(parseInt(value))}>
                   {[...Array(5).keys()].map((number) => {
@@ -367,6 +369,7 @@ function MapScreen() {
                                                 console.log("trip_id:", tripsFound[tripKey].pk);
                                                 console.log("passenger_id:", user.id);
                                                 storeTripRequest(tripsFound[tripKey].pk, user.id);
+                                                dispatch(updateStatus("busy"));
                                               }
                                       }>
                                         Request
@@ -381,7 +384,7 @@ function MapScreen() {
               </>
           }
 
-          {isTripCreated &&
+         {isTripCreated &&
               <View style={{padding: 10}}>
                   <Heading mb={2}>Current Trip</Heading>
                   <Heading size="md">From:</Heading>

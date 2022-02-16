@@ -71,7 +71,23 @@ def login(request):
             if carpool_user is not None:
                 django_login(request, carpool_user)
                 token, created = Token.objects.get_or_create(user=carpool_user)
-                return Response({"id": carpool_user.id, "username": carpool_user.username, "token": token.key})
+                driver = Driver.objects.filter(uid=carpool_user.id)
+
+                trip = {}
+                user_status = "available"
+                if driver.exists():
+                    driver = driver.get(uid=carpool_user.id)
+
+                    if Trip.objects.filter(driver_id=driver.id).exists():
+                        trip = model_to_dict(Trip.objects.get(driver_id=driver.id))
+                        print(trip)
+                        user_status = "driver_busy"
+                # if passenger trip exists:
+                #    user_status = "passenger_busy"
+                else:
+                    user_status = "available"
+                print(user_status)
+                return Response({"id": carpool_user.id, "username": carpool_user.username, "status": user_status, "trip_data": trip, "token": token.key})
             else:
                 return Response("Incorrect username or password.")
 
@@ -112,13 +128,21 @@ def get_driver(request):
     otherwise it returns status 404.
     """
 
-    if Driver.objects.filter(uid = request.user.id).exists():
+    if Driver.objects.filter(uid=request.user.id).exists():
+        driver = Driver.objects.get(uid=request.user.id)
         print("Driver exists!", request.user.id)
+        # checks if Driver currently has an ongoing Trip
+        if Trip.objects.filter(driver_id=driver.id).exists():
+            print("Driver status: BUSY")
+            current_trip = Trip.objects.get(driver_id=driver.id)
+
+            return Response(current_trip, status=status.HTTP_200_OK)
+        else:#
+            print("Driver status: AVAILABLE") #
+            return Response({}, status=status.HTTP_200_OK)
     else:
         print("Driver does not exist yet. Fill out form")
         return Response(status=status.HTTP_404_NOT_FOUND)
-
-    return Response({}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -172,10 +196,13 @@ def create_trip(request):
     """
 
     if request.method == 'POST':
-        driver = Driver.objects.get(uid=request.user.id)
-        trip = TripSerializer({"driver_id": driver, **request.data})
-        trip.create({"driver_id": driver, **request.data})
-        return Response({"status": "trip created"}, status=status.HTTP_200_OK)
+        if request.user.status == "available":
+            driver = Driver.objects.get(uid=request.user.id)
+            trip = TripSerializer({"driver_id": driver, **request.data})
+            trip = trip.create({"driver_id": driver, **request.data})
+            request.user.status = "busy"
+            return Response({"tripID": trip.id, "driverID": driver.id}, status=status.HTTP_200_OK)
+        return Response({"error": "You already have an ongoing trip."})
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -190,6 +217,9 @@ def get_trips(request):
     if request.method == 'POST':
         passenger = CarpoolUser.objects.get(id=request.user.id)
 
+        if passenger.status == "busy":
+            return Response({"error": "You already have an ongoing trip."})
+
         all_trips = Trip.objects.all()
         sorted_trips = all_trips.order_by("time_of_departure") 
 
@@ -201,6 +231,10 @@ def get_trips(request):
 
         distance_matrix_base_url = "https://maps.googleapis.com/maps/api/distancematrix/json"
         directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
+
+        # TODO: remove this later
+        if len(trips_serialized) < 1:
+            return Response({}, status=status.HTTP_200_OK)
 
         waypoints = "|".join([wp["name"] for wp in trips_serialized[3]['waypoints'].values()])
 

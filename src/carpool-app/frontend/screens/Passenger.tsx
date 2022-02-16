@@ -4,7 +4,7 @@ import {SafeAreaView} from "react-native";
 import {useRef, useEffect, useState} from "react";
 import {useAppDispatch, useAppSelector} from "../hooks";
 import {FormControl, Input} from "native-base";
-import {updateRole, resetState} from "../reducers/trips-reducer"
+import {updateRole, resetTripState} from "../reducers/trips-reducer"
 
 function PassengerScreen({navigation}) {
     const dispatch = useAppDispatch();
@@ -13,7 +13,7 @@ function PassengerScreen({navigation}) {
     const trips = useAppSelector(state => state.trips);
 
     useEffect(() => {
-        dispatch(resetState());
+        dispatch(resetTripState());
     }, [trips.role])
 
     return (

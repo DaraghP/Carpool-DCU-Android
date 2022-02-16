@@ -4,6 +4,7 @@ import {useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {updateUserState} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
+import {setLocations, updateTripState} from "../reducers/trips-reducer";
 
 function LoginScreen({ navigation }) {
   const dispatch = useAppDispatch();
@@ -35,7 +36,16 @@ function LoginScreen({ navigation }) {
             passwordInput.current.clear();
 
             // navigates to home screen once globals.user.token updates
-            dispatch(updateUserState({id: res.id, username: usernameText, token: res.token}));
+            dispatch(updateUserState({id: res.id, username: usernameText, status: res.status, token: res.token}));
+
+            // TODO: update trip state
+            // dispatch(updateTripState({
+            //     locations: {
+            //         startingLocation: res.trip_data["start"]
+            //         destLocation: res.trip_data["destination"],
+            //         waypoints: res.trip_data["waypoints"]
+            //     },
+            // }))
 
             setErrorFound(false);
         }

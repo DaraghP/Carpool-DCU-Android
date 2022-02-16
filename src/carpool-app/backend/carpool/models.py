@@ -8,6 +8,7 @@ from django.utils import timezone
 class CarpoolUser(AbstractUser):
     id = models.AutoField(primary_key=True)
     is_admin = models.BooleanField(default=False)
+    status = models.CharField(max_length=150, default="available")
     phone_no = models.DecimalField(max_digits=13, decimal_places=0, default="0871234567")
     photo = models.FileField(upload_to='defaults/', default="defaults/person-outline.svg")
 

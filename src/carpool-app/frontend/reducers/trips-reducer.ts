@@ -4,6 +4,7 @@
 
 import {createAction, createSlice} from "@reduxjs/toolkit";
 import { createLocationObj } from "../hooks";
+import {act} from "react-dom/test-utils";
 
 const locations = {
     startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: 53.1424, lng: -7.6921}),
@@ -19,20 +20,27 @@ const initialState = {
     role: "",
     locations: locations,
     markerRefs: {},
-    numberOfWaypoints: 0
+    numberOfWaypoints: 0,
+    passengers: {},
+    distance: 0,
+    duration: 0,
+    time_of_departure: "",
 }
 
 
-export const resetState = createAction("trips/reset_state");
+export const updateTripState = createAction<object>("trips/update_trip_state");
+export const resetTripState = createAction("trips/reset_trip_state");
 export const updateRole = createAction<string>("trips/update_role");
 export const setNumberOfWaypoints = createAction<number>("trips/set_number_of_waypoints");
 export const setLocations = createAction<object>("trips/set_locations");
+export const addPassenger = createAction<object>("trips/add_passenger");
+export const removePassenger = createAction<object>("trips/remove_passenger");
 
 export const TripsSlice = createSlice({
     name: "trips",
     initialState,
     reducers: {
-        update_state(state, action) {
+        update_trip_state(state, action) {
           return {...state, ...action.payload};
         },
         set_number_of_waypoints(state, action) {
@@ -46,13 +54,22 @@ export const TripsSlice = createSlice({
         update_role(state, action) {
             state.role = action.payload;
         },
-        reset_state(state) {
+        reset_trip_state(state) {
             return {
                 role: state.role,
                 locations: locations,
                 markerRefs: {},
-                numberOfWaypoints: 0
+                numberOfWaypoints: 0,
+                passengers: {}
             };
+        },
+        add_passenger(state, action) {
+            state.passengers = {...state.passengers, ...action.payload};
+        },
+        remove_passenger(state, action) { //
+            let temp = new Map(Object.entries(state.passengers));
+            temp.delete(action.payload);
+            state.passengers = Object.fromEntries(temp);
         }
     }
 })

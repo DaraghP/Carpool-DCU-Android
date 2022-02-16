@@ -8,13 +8,14 @@ const initialState = {
     id: "",
     username: "",
     token: "",
+    status: "available"
 }
 
 export const updateUserState = createAction<object>("user/update_state");
 export const updateUsername = createAction<string>("user/update_username");
 export const updateId = createAction<number>("user/update_id");
 export const updateToken = createAction<string>("user/update_token");
-
+export const updateStatus = createAction<string>("user/update_status");
 
 export const UserSlice = createSlice({
     name: "user",
@@ -28,6 +29,9 @@ export const UserSlice = createSlice({
         },
         update_username(state, action) {
             state.username = action.payload;
+        },
+        update_status(state, action) {
+            state.status = action.payload;
         },
         update_token(state, action) {
             state.token = action.payload;
