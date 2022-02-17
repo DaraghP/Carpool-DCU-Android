@@ -26,7 +26,9 @@ function DriverScreen({navigation}) {
     const [licensePlateText, setLicensePlateText] = useState("");
 
     useEffect(() => {
-        dispatch(resetTripState());
+        if (user.status === "available") {
+            dispatch(resetTripState());
+        }
         fetch(`${backendURL}/get_driver`, {
           method: "GET",
           headers: {
@@ -34,16 +36,15 @@ function DriverScreen({navigation}) {
               'Content-Type': 'application/json',
               'Authorization': `Token ${user.token}`
           },
-        }).then(response => ({status: response.status}))
+        }).then(response => response.json())
         .then(async (res) => {
-            if (res.status === 404) {
-                setHasCreatedDriverRole(false);
-                setGetDriverRequestFinished(true);
+            if (res.driver_exists) {
+                setHasCreatedDriverRole(true);
             }
             else {
-                setHasCreatedDriverRole(true);
-                setGetDriverRequestFinished(true);
+                setHasCreatedDriverRole(false);
             }
+            setGetDriverRequestFinished(true);
         }).catch((e) => {
             console.error(e)
         })
@@ -51,7 +52,9 @@ function DriverScreen({navigation}) {
 
 
     useEffect(() => {
-        dispatch(resetTripState());
+        if (user.status === "available") {
+            dispatch(resetTripState());
+        }
     }, [trips.role])
 
     const createDriver = () => {

@@ -13,7 +13,9 @@ function PassengerScreen({navigation}) {
     const trips = useAppSelector(state => state.trips);
 
     useEffect(() => {
-        dispatch(resetTripState());
+        if (user.status === "available") {
+            dispatch(resetTripState());
+        }
     }, [trips.role])
 
     return (

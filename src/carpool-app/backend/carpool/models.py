@@ -31,7 +31,7 @@ class Passenger(models.Model):
 class Trip(models.Model):
     id = models.AutoField(primary_key=True)
     driver_id = models.ForeignKey("Driver", on_delete=models.CASCADE)
-    time_of_departure = models.DateTimeField(default=timezone.now())
+    time_of_departure = models.DateTimeField(default=timezone.now)
     start = models.JSONField(default=dict)
     destination = models.JSONField(default=dict)
     waypoints = models.JSONField(default=dict)

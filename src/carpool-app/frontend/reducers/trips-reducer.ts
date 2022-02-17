@@ -13,8 +13,7 @@ const locations = {
     waypoint2: createLocationObj("waypoint2", "waypoint", "Waypoint 2"),
     waypoint3: createLocationObj("waypoint3", "waypoint", "Waypoint 3"),
     waypoint4: createLocationObj("waypoint4", "waypoint", "Waypoint 4"),
-} 
-
+}
 
 const initialState = {
     role: "",
@@ -22,9 +21,10 @@ const initialState = {
     markerRefs: {},
     numberOfWaypoints: 0,
     passengers: {},
-    distance: 0,
-    duration: 0,
-    time_of_departure: "",
+    distance: "",
+    duration: "",
+    timeOfDeparture: "",
+    availableSeats: 0,
 }
 
 
@@ -35,6 +35,10 @@ export const setNumberOfWaypoints = createAction<number>("trips/set_number_of_wa
 export const setLocations = createAction<object>("trips/set_locations");
 export const addPassenger = createAction<object>("trips/add_passenger");
 export const removePassenger = createAction<object>("trips/remove_passenger");
+export const setDistance = createAction<string>("trips/set_distance");
+export const setDuration = createAction<string>("trips/set_duration");
+export const setTimeOfDeparture = createAction<string>("trips/set_time_of_departure");
+export const setAvailableSeats = createAction<number>("trips/set_available_seats");
 
 export const TripsSlice = createSlice({
     name: "trips",
@@ -60,16 +64,33 @@ export const TripsSlice = createSlice({
                 locations: locations,
                 markerRefs: {},
                 numberOfWaypoints: 0,
-                passengers: {}
+                passengers: {},
+                distance: "",
+                duration: "",
+                timeOfDeparture: "",
+                availableSeats: 0,
             };
+
         },
         add_passenger(state, action) {
             state.passengers = {...state.passengers, ...action.payload};
         },
-        remove_passenger(state, action) { //
+        remove_passenger(state, action) {
             let temp = new Map(Object.entries(state.passengers));
             temp.delete(action.payload);
             state.passengers = Object.fromEntries(temp);
+        },
+        set_distance(state, action) {
+            state.distance = action.payload;
+        },
+        set_duration(state, action) {
+            state.duration = action.payload;
+        },
+        set_time_of_departure(state, action) {
+            state.timeOfDeparture = action.payload;
+        },
+        set_available_seats(state, action) {
+            state.availableSeats = action.payload;
         }
     }
 })

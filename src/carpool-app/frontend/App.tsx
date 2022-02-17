@@ -5,7 +5,7 @@ import {Provider} from "react-redux";
 import {store} from "./store";
 import Index from "./index";
 
-LogBox.ignoreLogs(["Setting a timer"])
+LogBox.ignoreLogs(["Setting a timer"]);
 
 const firebaseConfig = {
   apiKey: FIREBASE_API_KEY,

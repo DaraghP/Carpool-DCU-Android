@@ -1,14 +1,16 @@
 import {StyleSheet, View, Alert} from "react-native";
 import {Box, VStack, Button, Center, FormControl, Input, Heading, Stack} from "native-base";
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {updateUserState} from "../reducers/user-reducer";
-import {useAppDispatch, useAppSelector} from "../hooks";
+import {useAppDispatch, useAppSelector, createLocationObj} from "../hooks";
 import {setLocations, updateTripState} from "../reducers/trips-reducer";
+
 
 function LoginScreen({ navigation }) {
   const dispatch = useAppDispatch();
   const user = useAppSelector(state => state.user);
+  const trips = useAppSelector(state=> state.trips);
   const backendURL = useAppSelector(state => state.globals.backendURL);
   const usernameInput = useRef("");
   const passwordInput = useRef("");
@@ -38,15 +40,24 @@ function LoginScreen({ navigation }) {
             // navigates to home screen once globals.user.token updates
             dispatch(updateUserState({id: res.id, username: usernameText, status: res.status, token: res.token}));
 
-            // TODO: update trip state
-            // dispatch(updateTripState({
-            //     locations: {
-            //         startingLocation: res.trip_data["start"]
-            //         destLocation: res.trip_data["destination"],
-            //         waypoints: res.trip_data["waypoints"]
-            //     },
-            // }))
+            console.log(Object.keys(res.trip_data["waypoints"]).length);
 
+            Object.keys(res.trip_data["waypoints"]).map((key) => {
+                res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
+            });
+
+            dispatch(updateTripState({
+                ...res.trip_data,
+                locations: {
+                    ...trips.locations,
+                    startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"].lat, lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
+                    destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: res.trip_data["destination"].lat, lng: res.trip_data["destination"].lng}, res.trip_data["destination"].name, true),
+                    ...res.trip_data["waypoints"],
+                },
+                availableSeats: res.trip_data["available_seats"],
+                timeOfDeparture: res.trip_data["time_of_departure"],
+                numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
+            }))
             setErrorFound(false);
         }
         else {

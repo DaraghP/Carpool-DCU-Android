@@ -4,12 +4,13 @@ import userReducer from "../reducers/user-reducer";
 import {updateRole} from "../reducers/trips-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {useEffect} from "react";
 
 function HomeScreen({ navigation }) {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user);
+    const trips = useAppSelector(state => state.trips);
     const backendURL = useAppSelector(state => state.globals.backendURL);
-
 
     const createPassenger = () => {
         fetch(`${backendURL}/create_passenger`, {

@@ -80,7 +80,6 @@ def login(request):
 
                     if Trip.objects.filter(driver_id=driver.id).exists():
                         trip = model_to_dict(Trip.objects.get(driver_id=driver.id))
-                        print(trip)
                         user_status = "driver_busy"
                 # if passenger trip exists:
                 #    user_status = "passenger_busy"
@@ -127,22 +126,8 @@ def get_driver(request):
     Gets driver, if they exist, their details are sent back in the response,
     otherwise it returns status 404.
     """
-
-    if Driver.objects.filter(uid=request.user.id).exists():
-        driver = Driver.objects.get(uid=request.user.id)
-        print("Driver exists!", request.user.id)
-        # checks if Driver currently has an ongoing Trip
-        if Trip.objects.filter(driver_id=driver.id).exists():
-            print("Driver status: BUSY")
-            current_trip = Trip.objects.get(driver_id=driver.id)
-
-            return Response(current_trip, status=status.HTTP_200_OK)
-        else:#
-            print("Driver status: AVAILABLE") #
-            return Response({}, status=status.HTTP_200_OK)
-    else:
-        print("Driver does not exist yet. Fill out form")
-        return Response(status=status.HTTP_404_NOT_FOUND)
+    # may need to return car information in future
+    return Response({"driver_exists": Driver.objects.filter(uid=request.user.id).exists()}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
