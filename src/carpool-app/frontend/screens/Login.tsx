@@ -38,11 +38,10 @@ function LoginScreen({ navigation }) {
             passwordInput.current.clear();
 
             // navigates to home screen once globals.user.token updates
-            dispatch(updateUserState({id: res.id, username: usernameText, status: res.status, token: res.token}));
+            dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token}));
 
-            console.log(Object.keys(res.trip_data["waypoints"]).length);
 
-            Object.keys(res.trip_data["waypoints"]).map((key) => {
+           Object.keys(res.trip_data["waypoints"]).map((key) => {
                 res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
             });
 

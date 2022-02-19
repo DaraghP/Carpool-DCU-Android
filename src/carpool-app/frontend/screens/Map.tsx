@@ -6,14 +6,45 @@ import {GOOGLE_API_KEY} from "@env";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import {updateStatus} from "../reducers/user-reducer";
-import {setNumberOfWaypoints, resetTripState, setDistance, setDuration, setAvailableSeats, setTimeOfDeparture} from "../reducers/trips-reducer";
-import {storeTripRequest, setupTripRequestListener, useAppDispatch, useAppSelector, createFirebaseTrip} from "../hooks";
-import {Button, Text, Select, Heading, VStack, Flex, Icon} from "native-base";
+import {
+    setNumberOfWaypoints,
+    resetTripState,
+    setDistance,
+    setDuration,
+    setAvailableSeats,
+    setTimeOfDeparture,
+    updateTripState
+} from "../reducers/trips-reducer";
+import {
+    storeTripRequest,
+    setupTripRequestListener,
+    useAppDispatch,
+    useAppSelector,
+    createFirebaseTrip,
+    removeFirebaseTrip, acceptTripRequest, createLocationObj
+} from "../hooks";
+import {
+    Button,
+    Text,
+    Select,
+    Heading,
+    VStack,
+    Flex,
+    Icon,
+    Modal,
+    Alert,
+    HStack,
+    IconButton,
+    CloseIcon
+} from "native-base";
 import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {getDatabase, onValue, off, ref, get, onChildChanged, onChildAdded} from "firebase/database";
+import firebase from "firebase/compat";
 
+// TODO: Refactor
 function MapScreen() {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
@@ -21,16 +52,21 @@ function MapScreen() {
     const backendURL = useAppSelector(state => state.globals.backendURL);
     const mapRef = useRef(null);
 
-    const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null});
+    const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null, data: {trip: {status: "waiting", passengers: {}}, tripRequests: {}}});
+    const [test, setTest] = useState();
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+    const [showPassengerRequestsModal, setShowPassengerRequestsModal] = useState(false);
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
-    // (user.status === "driver_busy")
-    useEffect(() => {
-        const {tripID} = firebaseTripsVal;
-        setupTripRequestListener(tripID);
-    }, [firebaseTripsVal])
-    
+    const [isPassengerInTripRequests, setIsPassengerInTripRequests] = useState<boolean | null>(null);
+    const [isPassengerInTrip, setIsPassengerInTrip] = useState<boolean>(false);
+
+    // firebase
+    const db = getDatabase();
+    const requestsReference = ref(db, `tripRequests/${trips.id}`);
+    const tripsReference = ref(db, `trips/${trips.id}`);
+    const tripsPassengersReference = ref(db, `/trips/${trips.id}/passengers/`);
+
     const openPanel = () => {
         setIsPanelActive(true);
     };
@@ -65,7 +101,7 @@ function MapScreen() {
             }
         })
 
-        let trip_data = { //
+        let trip_data = {
             start: {
                 name: trips.locations.startingLocation.marker.description,
                 lng: trips.locations.startingLocation.info.coords.lng,
@@ -81,10 +117,14 @@ function MapScreen() {
             available_seats: trips.availableSeats,
             duration: trips.duration,
             distance: trips.distance,
-            time_of_departure: new Date(trips.timeOfDeparture),
+            time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(),
         };
 
-        console.log(user.status)
+        if (trips.timeOfDeparture === "") {
+            dispatch(setTimeOfDeparture(new Date().toString()));
+        }
+
+        // console.log(user.status)
         if (user.status === "available") {
             fetch(`${backendURL}/create_trip`, {
                 method: "POST",
@@ -97,13 +137,14 @@ function MapScreen() {
             }).then(response => response.json())
                 .then(res => {
                     if (!("errorType" in res)) {
-                        console.log("TRIP CREATED");
+                        // console.log("TRIP CREATED");
                         let isFirebaseTripCreated = createFirebaseTrip(user.status, res.tripID, res.driverID);
                         if (isFirebaseTripCreated) {
                             dispatch(updateStatus("driver_busy"));
                         }
-                        console.log(isFirebaseTripCreated);
-                        setFirebaseTripsVal({tripID: res.tripID, driverID: res.driverID});
+                        setPreviousTripID(trips.id)
+                        dispatch(updateTripState({id: res.tripID}));
+                        setFirebaseTripsVal({tripID: res.tripID, driverID: res.driverID, data: {trip: {}, tripRequests: {}}});
                     } else {
                         console.log(res.errorType, res.errorMessage);
                     }
@@ -126,8 +167,12 @@ function MapScreen() {
             },
             duration: trips.duration,
             distance: trips.distance,
-            time_of_departure: new Date(trips.timeOfDeparture),
+            time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(),
         };
+
+        if (trips.timeOfDeparture === "") {
+            dispatch(setTimeOfDeparture(new Date().toString()))
+        }
 
         fetch(`${backendURL}/get_trips`, {
             method: "POST",
@@ -149,10 +194,34 @@ function MapScreen() {
         })
     }
 
+    // for driver only
+    const acceptRequest = (passengerID) => {
+        acceptTripRequest(trips.id, passengerID);
+        // TODO: send data to django
+    }
+
+    // for driver only
     const cancelTrip = () => {
-        console.log("Trip Cancelled.");
+        // console.log("Trip Cancelled.");
+
         // alert "are you sure" then delete from db
-        dispatch(updateStatus("available"));
+        removeFirebaseTrip(user.status, trips.id);
+        fetch(`${backendURL}/remove_trip`, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${user.token}`
+            },
+            body: JSON.stringify({})
+        }).then(response => response.status)
+        .then(status => {
+            if (status === 200) {
+                dispatch(updateTripState({id: null}));
+                // console.log("trip deleted")
+            }
+            dispatch(updateStatus("available"));
+        })
     }
 
     const onMapReadyHandler = () => {
@@ -169,13 +238,183 @@ function MapScreen() {
         }
     }
 
+    const [previousTripID, setPreviousTripID] = useState();
+
+    const disableListener = (tripId) => {
+        let tripRef = firebase.database().ref(`/tripRequests/${tripId}`);
+        tripRef.off() //
+    }
+
+
+    useEffect(() => {
+        let tempFbTripsVal = {...firebaseTripsVal}
+
+        if (previousTripID !== null) {
+            off(ref(db, `/tripRequests/${previousTripID}`));
+            off(ref(db, `/trips/${previousTripID}`));
+            setPreviousTripID(trips.id);
+            onValue(ref(db, `/tripRequests/${trips.id}`), snapshot => {
+                console.log("child change", previousTripID, trips.id, snapshot.val());
+                tempFbTripsVal = {
+                    ...tempFbTripsVal,
+                    data: {...tempFbTripsVal.data, tripRequests: snapshot.val()}
+                };
+
+                setFirebaseTripsVal(tempFbTripsVal);
+
+            })
+
+            onValue(ref(db, `/trips/${previousTripID}`), (snapshot) => {
+                tempFbTripsVal = {...tempFbTripsVal, data: {...tempFbTripsVal.data, trip: snapshot.val()}};
+                setFirebaseTripsVal(tempFbTripsVal);
+            })
+        }
+    }, [previousTripID])
+
+    useEffect(() => {
+        console.log("t", trips.id, previousTripID, firebaseTripsVal.data.tripRequests)
+    }, [firebaseTripsVal.data.tripRequests])
+
+
+    useEffect(() => {
+
+        setPreviousTripID(trips.id);
+
+
+        // // listen for changes
+
+        //
+
+        //
+        // onChildChanged(requestsReference, (snapshot) => {
+        //     console.log("child changed", snapshot.val());
+        // })
+        //
+        // onChildAdded(requestsReference, (snapshot) => {
+        //     console.log("child added", snapshot.val());
+        // })
+
+
+        // onValue(tripsReference, (snapshot) => {
+        //     // console.log("trips", trips.role, snapshot.val())
+        //     console.log("trips", trips.id, tripsReference.toString());
+        //     setFirebaseTripsVal({...firebaseTripsVal, data: {...firebaseTripsVal.data, trip: snapshot.val()}});
+        // })
+
+        // onValue(tripsPassengersReference, (snapshot) => {
+        //     console.log("passengers", trips.role, snapshot.val())
+        //     setFirebaseTripsVal(
+        //         {
+        //                 ...firebaseTripsVal,
+        //                 data: {
+        //                         ...firebaseTripsVal.data,
+        //                         trip: {
+        //                             ...firebaseTripsVal.data.trip,
+        //                             passengers: snapshot.val()
+        //                         }
+        //                 }
+        //               }
+        //     )
+        //     if (trips.role === "passenger" && snapshot.val() !== null) {
+        //         if (user.id in snapshot.val()) {
+        //             setIsPassengerInTrip(true);
+        //         }
+        //         else {
+        //             setIsPassengerInTrip(false);
+        //         }
+        //     }
+        // })
+
+        console.log("\n\n\n")
+        // if (trips.role === "driver") {
+        //
+        // }
+        // else {
+        //
+        // }
+
+
+    }, [])
+// lemme check views
+    useEffect(() => { // like any other comments that we forgot to delete in other files
+        // if passengerinrequests true, and passenger not in trip requests
+        // check if passenger is in trips/tripID/passengers
+        // if not then passenger request was denied
+        // else accepted
+        // console.log(trips.role, firebaseTripsVal.data, trips.id);//
+        // console.log("t", isPassengerInTripRequests, trips.id)//
+        console.log(trips.role);
+        //             console.log(trips.role, trips.id, firebaseTripsVal)
+        // if (trips.role === "passenger" && isPassengerInTripRequests === true) {
+        //     // console.log(trips.role, user.id, trips.id, firebaseTripsVal);
+        //
+        //     // console.log("test", snapshot.val(), trips.id);//
+        //
+        //     if (!isPassengerInTrip && !firebaseTripsVal.data.tripRequests) {
+        //         setIsPassengerInTripRequests(false);
+        //     }
+        //     else if (!isPassengerInTrip && !(user.id in firebaseTripsVal.data.tripRequests)) {
+        //         setIsPassengerInTripRequests(false);//
+        //     }
+        //
+        //     console.log(trips.role, firebaseTripsVal);
+        //     if (firebaseTripsVal.data.trip.passengers !== null) {
+        //
+        //         console.log(firebaseTripsVal.data.trip.passengers)
+        //         console.log("test")
+        //         if (user.id in firebaseTripsVal.data.trip.passengers) {
+        //             console.log("passenger in trip!");
+        //             setIsPassengerInTrip(true);
+        //             setIsPassengerInTripRequests(false);
+        //         //     fetch(`${backendURL}/join_trip`, {
+        //         //         method: "POST",
+        //         //         headers: {
+        //         //             'Accept': 'application/json',
+        //         //             'Content-Type': 'application/json',
+        //         //             'Authorization': `Token ${user.token}`
+        //         //         },
+        //         //         body: JSON.stringify({tripID: trips.id})
+        //         //     }).then(response => response.json())
+        //         //         .then((res) => {
+        //         //             if (!("error" in res)) {
+        //         //                 console.log(res.trip_data);
+        //         //                 Object.keys(res.trip_data["waypoints"]).map((key) => {
+        //         //                     res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
+        //         //                 });
+        //         //
+        //         //                 dispatch(updateTripState({
+        //         //                     ...res.trip_data,
+        //         //                     locations: {
+        //         //                         ...trips.locations,
+        //         //                         startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"].lat, lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
+        //         //                         destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: res.trip_data["destination"].lat, lng: res.trip_data["destination"].lng}, res.trip_data["destination"].name, true),
+        //         //                         ...res.trip_data["waypoints"],
+        //         //                     },
+        //         //                     availableSeats: res.trip_data["available_seats"],
+        //         //                     timeOfDeparture: res.trip_data["time_of_departure"],
+        //         //                     numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
+        //         //                 }))
+        //         //
+        //         //             }
+        //         //             else {
+        //         //                 console.log(res.error);
+        //         //             }
+        //         //         })
+        //         }
+        //
+        //     }
+        // }
+
+    }, [firebaseTripsVal.data.trip, firebaseTripsVal.tripID])
+
     useEffect(() => {
         onMapReadyHandler();
     }, [trips.numberOfWaypoints, trips.distance, trips.duration])
 
 
   return (
-      <View key={v4()} style={styles.container}><View style={{flex: 1, elevation: -1, zIndex: -1}}>
+      <View key={v4()} style={styles.container}>
+          <View style={{flex: 1, elevation: -1, zIndex: -1}}>
                   {user.status === "available" &&
                       <>
                           <CreateGoogleAutocompleteInput
@@ -231,6 +470,30 @@ function MapScreen() {
                               }}/>
                       </>
                   }
+                  {/*  */}
+                  {firebaseTripsVal.data.tripRequests ?
+                      user.status === "driver_busy" && Object.keys(firebaseTripsVal.data.tripRequests).length > 0 &&
+                              <TouchableOpacity onPress={() => {
+                                  setShowPassengerRequestsModal(true)
+                              }}>
+                                  <Alert variant="solid" status="info" colorScheme="info">
+                                      <VStack>
+                                          <HStack space={3} alignItems="center">
+                                              <Alert.Icon mt="1" size={6}/>
+                                              <Text color="white">
+                                                  {Object.keys(firebaseTripsVal.data?.tripRequests).length}{" "}
+                                                  New
+                                                  passenger {Object.keys(firebaseTripsVal.data.tripRequests).length > 1 ? "requests" : "request"}
+                                              </Text>
+                                              {/*<IconButton variant="unstyled" icon={<CloseIcon size="3"/>} onPress={() => {console.log("Alert closed");}}/>*/}
+                                          </HStack>
+                                      </VStack>
+                                  </Alert>
+                              </TouchableOpacity>
+
+                     : null
+                  }
+
                   <MapView
                       ref={mapRef}
                       style={{flex: 1}}
@@ -315,14 +578,17 @@ function MapScreen() {
           {/* <Text>Trip Information:</Text>
               <Text>Distance: {distance}</Text>
               <Text>Duration: {duration}</Text>  */}
+
           {trips.role === "passenger" &&
               <>
-                  <Button onPress={() => {
-                      openPanel();
-                      searchTrips();
-                  }}>
-                      Show Trips
-                  </Button>
+                  {!isPassengerInTripRequests &&
+                      <Button onPress={() => {
+                          openPanel();
+                          searchTrips();
+                      }}>
+                          Show Trips
+                      </Button>
+                  }
                   <SwipeablePanel
                       key={v4()}
                       scrollViewProps={{style: {padding: 10}}}
@@ -338,55 +604,89 @@ function MapScreen() {
                         setIsPanelActive(false);
                       }}
                   >
-                  <Heading mb={2}>Nearby Drivers</Heading>
+                      <Heading mb={2}>Nearby Drivers</Heading>
 
-                  {tripsFound !== null &&
-                      Object.keys(tripsFound).map((tripKey) => {
-                          return (
-                              <TouchableOpacity key={v4()} style={styles.tripButton}>
-                                  <Flex direction="row" wrap="wrap">
-                                      <VStack maxWidth="75%">
-                                          <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
-                                          <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                                          <Text>{tripsFound[tripKey].time_of_departure}</Text>
-                                      </VStack>
-                                      <Button style={{flexDirection: "row", marginLeft: "auto"}}
+                      {tripsFound !== null &&
+                          Object.keys(tripsFound).map((tripKey) => {
+                              return (
+                                  <TouchableOpacity key={v4()} style={styles.tripButton}>
+                                      <Flex direction="row" wrap="wrap">
+                                          <VStack maxWidth="75%">
+                                              <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
+                                              <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
+                                              <Text>{tripsFound[tripKey].time_of_departure}</Text>
+                                          </VStack>
+                                          <Button style={{flexDirection: "row", marginLeft: "auto"}}
                                               onPress={() => {
-                                                console.log("Trip requested.");
-                                                console.log("trip_id:", tripsFound[tripKey].pk);
-                                                console.log("passenger_id:", user.id);
-                                                storeTripRequest(tripsFound[tripKey].pk, user.id);
-                                                dispatch(updateStatus("passenger_busy"));
+                                                  setPreviousTripID(trips.id);
+                                                  dispatch(updateTripState({id: tripsFound[tripKey].pk}));
+                                                  setIsPassengerInTripRequests(true);
+                                                  dispatch(updateStatus("passenger_busy"));
+
+
+                                                  let passengerData = {
+                                                      passengerID: user.id,
+                                                      name: `${user.firstName} ${user.lastName.charAt(0)}.`,
+                                                  }
+                                                  storeTripRequest(tripsFound[tripKey].pk, passengerData);
                                               }
-                                      }>
-                                        Request
-                                      </Button>
-                                  </Flex>
-                              </TouchableOpacity>
-                          );
-                      }
-                  )}
+                                          }>
+                                            Request
+                                          </Button>
+                                      </Flex>
+                                  </TouchableOpacity>
+                              );
+                          }
+                      )}
 
                   </SwipeablePanel>
               </>
           }
 
          {user.status === "driver_busy" &&
-              <View style={{padding: 10}}>
-                  <Heading mb={2}>Current Trip</Heading>
-                  <Heading size="md">From:</Heading>
-                  <Text>{trips.locations.startingLocation.marker.description}</Text>
-                  <Text>To: {trips.locations.destLocation.marker.description}</Text>
-                  <Text>Departure Time:</Text>
-                  <Text style={{fontWeight: "bold"}}>{new Date(trips.timeOfDeparture).toLocaleTimeString().slice(0, 5)} {new Date(trips.timeOfDeparture).toLocaleDateString()}</Text>
+             <>
+                 <View style={{padding: 10}}>
+                      <Heading mb={2}>Current Trip</Heading>
+                      <Heading size="md">From:</Heading>
+                      <Text>{trips.locations.startingLocation.marker.description}</Text>
+                      <Text>To: {trips.locations.destLocation.marker.description}</Text>
+                      <Text>Departure Time:</Text>
+                      <Text style={{fontWeight: "bold"}}>{new Date(trips.timeOfDeparture).toLocaleTimeString().slice(0, 5)} {new Date(trips.timeOfDeparture).toLocaleDateString()}</Text>
 
-                  <Text>ETA: </Text>{/* timeofDeparture + duration*/}
-                  <Text>Passengers: Empty Seat x {trips.availableSeats}</Text>
-                  <Button>Passenger Requests +1</Button>
-                  <Button>View Route</Button>
-                  <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
-                  <Button>Trip Complete</Button>
-              </View>
+                      <Text>ETA: </Text>{/* timeofDeparture + duration*/}
+                      <Text>Passengers: Empty Seat x {trips.availableSeats}</Text>
+                      <Button onPress={() => {setShowPassengerRequestsModal(true)}}>Passenger Requests +1</Button>
+                      <Button>View Route</Button>
+                      <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
+                      <Button>Trip Complete</Button>
+                 </View>
+                 <Modal isOpen={showPassengerRequestsModal} onClose={() => {setShowPassengerRequestsModal(false)}}>
+                     <Modal.Content size="sm">
+                         <Modal.CloseButton/>
+                         <Modal.Header>Requests</Modal.Header>
+                         <Modal.Body>
+
+                            <VStack>
+                                 {firebaseTripsVal.data.tripRequests &&
+                                     Object.keys(firebaseTripsVal.data.tripRequests).map((key, index) => {
+                                         return (
+                                            <TouchableOpacity key={v4()}>
+                                                <Flex key={v4()} direction="row" wrap="wrap">
+                                                    <Text ml="5">{firebaseTripsVal.data.tripRequests[key].name}</Text>
+                                                    <Button onPress={() => {acceptTripRequest(trips.id, key)}}>Accept</Button>
+                                                    <Button onPress={() => {console.log("decline trip request");}}>Decline</Button>
+                                                </Flex>
+                                            </TouchableOpacity>
+                                            // <Button key={v4()} onPress={() => acceptRequest(key)}>{firebaseTripsVal.data.tripRequests[key].name}</Button>
+                                        )
+                                     })
+                                 }
+                            </VStack>
+
+                         </Modal.Body>
+                     </Modal.Content>
+                 </Modal>
+             </>
           }
 
       </View>

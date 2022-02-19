@@ -1,7 +1,6 @@
 import {TypedUseSelectorHook, useDispatch, useSelector} from "react-redux";
 import {AppDispatch, RootState} from "./store";
-import {getDatabase, ref, set, onValue, child, push, update} from "firebase/database";
-import {updateStatus} from "./reducers/user-reducer";
+import {getDatabase, ref, set, onValue, remove, update} from "firebase/database";
 
 
 // redux typescript hooks
@@ -43,6 +42,7 @@ export function createFirebaseTrip(status, tripID, driverID) {
         const db = getDatabase();
         const reference = ref(db, `trips/${tripID}`)
         set(reference, {
+            status: "waiting",
             driverID: driverID,
             passengers: {},
         })
@@ -53,14 +53,31 @@ export function createFirebaseTrip(status, tripID, driverID) {
     return false;
 }
 
-export function storeTripRequest(tripID, passengerID) {
+export function removeFirebaseTrip(status, tripID) {
+    if (status !== "available") {
+        const db = getDatabase();
+        console.log(status, tripID);
+        const reference = ref(db, `trips/${tripID}`);
+        remove(reference);
+    }
+}
+
+export function storeTripRequest(tripID, passengerData) {
     const db = getDatabase();
-    update(ref(db), {[`/trips/${tripID}/passengers/${passengerID}`]: {passengerId: passengerID}});
+    console.log("passnegerID store", passengerData.passengerID)
+    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: passengerData});
+}
+
+export function acceptTripRequest(tripID, passengerID) {
+    const db = getDatabase();
+    console.log("passengerID", passengerID);
+    remove(ref(db, `/tripRequests/${tripID}/${passengerID}`));
+    update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerID}`]: {passengerId: passengerID}});
 }
 
 export function setupTripRequestListener(tripId) {
     const db = getDatabase();
-    const reference = ref(db, `trips/${tripId}`);
+    const reference = ref(db, `tripRequests/${tripId}`);
     onValue(reference, (snapshot) => {
         console.log(snapshot);
     })

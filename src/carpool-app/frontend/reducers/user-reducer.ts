@@ -7,6 +7,8 @@ import {createAction, createSlice} from "@reduxjs/toolkit";
 const initialState = {
     id: "",
     username: "",
+    firstName: "",
+    lastName: "",
     token: "",
     status: "available"
 }

@@ -1,6 +1,5 @@
 import json
 import requests
-from django.http import JsonResponse
 from django.core import serializers as django_serializers
 from django.forms.models import model_to_dict
 from django.contrib.auth import authenticate, login as django_login
@@ -85,8 +84,15 @@ def login(request):
                 #    user_status = "passenger_busy"
                 else:
                     user_status = "available"
-                print(user_status)
-                return Response({"id": carpool_user.id, "username": carpool_user.username, "status": user_status, "trip_data": trip, "token": token.key})
+
+                return Response({
+                    "id": carpool_user.id,
+                    "username": carpool_user.username,
+                    "first_name": carpool_user.first_name,
+                    "last_name": carpool_user.last_name,
+                    "status": user_status,
+                    "trip_data": trip,
+                    "token": token.key})
             else:
                 return Response("Incorrect username or password.")
 
@@ -185,9 +191,32 @@ def create_trip(request):
             driver = Driver.objects.get(uid=request.user.id)
             trip = TripSerializer({"driver_id": driver, **request.data})
             trip = trip.create({"driver_id": driver, **request.data})
-            request.user.status = "busy"
+            request.user.current_trip = trip
+            request.user.status = "driver_busy"
+            request.user.save()
             return Response({"tripID": trip.id, "driverID": driver.id}, status=status.HTTP_200_OK)
         return Response({"error": "You already have an ongoing trip."})
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def remove_trip(request):
+    """
+    Removes drivers trip
+    """
+
+    if request.method == "POST":
+        if request.user.status != "available":
+            driver = Driver.objects.get(uid=request.user.id)
+            trip = Trip.objects.get(driver_id=driver.id)
+            request.user.current_trip = None
+            trip.delete()
+
+            request.user.status = "available"
+            request.user.save()
+            return Response(status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -221,10 +250,13 @@ def get_trips(request):
         if len(trips_serialized) < 1:
             return Response({}, status=status.HTTP_200_OK)
 
-        waypoints = "|".join([wp["name"] for wp in trips_serialized[3]['waypoints'].values()])
+        if len(trips_serialized[0]["waypoints"]) < 1:
+            waypoints = ""
+        else:
+            waypoints = "|".join([wp["name"] for wp in trips_serialized[0]['waypoints'].values()])
 
-        distancematrix_url = urllib.parse.quote(f"{distance_matrix_base_url}?destinations={trips_serialized[2]['destination']['name']}|{request.data['start']['name']}&origins={trips_serialized[2]['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
-        directions_url = urllib.parse.quote(f"{directions_base_url}?destination={trips_serialized[3]['destination']['name']}&origin={trips_serialized[3]['start']['name']}&waypoints={waypoints}|{request.data['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
+        # distancematrix_url = urllib.parse.quote(f"{distance_matrix_base_url}?destinations={trips_serialized[2]['destination']['name']}|{request.data['start']['name']}&origins={trips_serialized[2]['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
+        directions_url = urllib.parse.quote(f"{directions_base_url}?destination={trips_serialized[0]['destination']['name']}&origin={trips_serialized[0]['start']['name']}&waypoints={waypoints}|{request.data['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
 
         response = requests.get(directions_url)
 
@@ -243,3 +275,57 @@ def get_trips(request):
         return Response(trips_serialized, status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def join_trip(request):
+#     """
+#     Used by passengers to get trip data when a passengers request to a driver is accepted
+#     """
+#
+#     if request.method == "POST":
+#         trip_id = request.data.get("tripID")
+#         if Trip.objects.filter(id=trip_id).exists():
+#             trip = Trip.objects.get(id=trip_id)
+#             if request.user.current_trip is not trip:
+#                 request.user.current_trip = trip
+#
+#             trip.passengers[request.user.id] = {"passengerID": request.user.id}
+#             request.user.status = "passenger_busy"
+#             request.user.save()
+#             trip.save()
+#
+#             return Response({"trip_data": model_to_dict(trip)})
+#
+#         return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
+#return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_passenger_to_trip(request): # request.data = {tripID: x, passengerId: y}
+    # Add passenger to trip.passengers
+    # Add passenger's starting_location to trip.waypoints
+    # Update passenger status to "passenger_busy"
+    if request.method == "POST":
+        trip_id = request.data.get("tripID")
+        passenger_id = request.data.get("passengerID")
+        passenger_user = CarpoolUser.objects.get(id=passenger_id)
+        if Trip.objects.filter(id=trip_id).exists():
+            trip = Trip.objects.get(id=trip_id)
+            if passenger_user.current_trip is not trip:
+                passenger_user.current_trip = trip
+                passenger_user.status = "passenger_busy"
+
+            trip.passengers[passenger_id] = {
+                "passengerName": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
+                "passengerID": passenger_id,
+                "passengerLocation": "test",
+
+            }
+
+            passenger_user.save()
+            trip.save()
+
+

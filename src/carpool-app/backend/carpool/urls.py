@@ -12,5 +12,7 @@ urlpatterns = [
     path("create_driver", views.create_driver, name="create-driver"),
     path("create_passenger", views.create_passenger, name="create-passenger"),
     path("create_trip", views.create_trip, name="create-trip"),
+    path("remove_trip", views.remove_trip, name="remove-trip"),
     path("get_trips", views.get_trips, name="get-trips"),
+    # path("join_trip", views.join_trip, name="join-trip"),
 ]
