@@ -92,7 +92,8 @@ def login(request):
                     "last_name": carpool_user.last_name,
                     "status": user_status,
                     "trip_data": trip,
-                    "token": token.key})
+                    "token": token.key
+                })
             else:
                 return Response("Incorrect username or password.")
 
@@ -277,55 +278,66 @@ def get_trips(request):
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def join_trip(request):
-#     """
-#     Used by passengers to get trip data when a passengers request to a driver is accepted
-#     """
-#
-#     if request.method == "POST":
-#         trip_id = request.data.get("tripID")
-#         if Trip.objects.filter(id=trip_id).exists():
-#             trip = Trip.objects.get(id=trip_id)
-#             if request.user.current_trip is not trip:
-#                 request.user.current_trip = trip
-#
-#             trip.passengers[request.user.id] = {"passengerID": request.user.id}
-#             request.user.status = "passenger_busy"
-#             request.user.save()
-#             trip.save()
-#
-#             return Response({"trip_data": model_to_dict(trip)})
-#
-#         return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
-#return Response(status=status.HTTP_400_BAD_REQUEST)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def join_trip(request):
+    """
+    Used by passengers to get trip data when a passengers request to a driver is accepted
+    """
+
+    if request.method == "POST":
+        trip_id = request.data.get("tripID")
+        if Trip.objects.filter(id=trip_id).exists():
+            trip = Trip.objects.get(id=trip_id)
+            if request.user.current_trip is not trip:
+                request.user.current_trip = trip
+
+            request.user.save()
+            trip.save()
+
+            return Response({"trip_data": model_to_dict(trip)})
+
+        return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
+    return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def add_passenger_to_trip(request): # request.data = {tripID: x, passengerId: y}
+def add_passenger_to_trip(request):  # request.data = {tripID: A, passengerData : {id: B, name: C, passengerLocation: {name: D, lat: E, lng: F}}}
     # Add passenger to trip.passengers
     # Add passenger's starting_location to trip.waypoints
     # Update passenger status to "passenger_busy"
     if request.method == "POST":
+        print("Adding passenger to trip...")
         trip_id = request.data.get("tripID")
-        passenger_id = request.data.get("passengerID")
-        passenger_user = CarpoolUser.objects.get(id=passenger_id)
-        if Trip.objects.filter(id=trip_id).exists():
-            trip = Trip.objects.get(id=trip_id)
-            if passenger_user.current_trip is not trip:
-                passenger_user.current_trip = trip
-                passenger_user.status = "passenger_busy"
+        if CarpoolUser.objects.filter(id=request.data["passengerData"]["id"]).exists():
+            passenger_user = CarpoolUser.objects.get(id=request.data["passengerData"]["id"])
+            if Trip.objects.filter(id=trip_id).exists():
+                trip = Trip.objects.get(id=trip_id)
+                if trip.passengers.get(f"passenger{passenger_user.id}") is None:
+                    passenger_user.current_trip = trip
+                    passenger_user.status = "passenger_busy"
+                else:
+                    return Response({"error": "passenger already in the same trip."}, status=status.HTTP_400_BAD_REQUEST)
 
-            trip.passengers[passenger_id] = {
-                "passengerName": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
-                "passengerID": passenger_id,
-                "passengerLocation": "test",
+                trip.passengers[f"passenger{passenger_user.id}"] = {
+                    "passengerName": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
+                    "passengerID": request.data["passengerData"]["id"],
+                    "passengerLocation": request.data["passengerData"]["passengerLocation"]["name"],
+                }
+                trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
+                    "name": request.data["passengerData"]["passengerLocation"]["name"],
+                    "lat": request.data["passengerData"]["passengerLocation"]["lat"],
+                    "lng": request.data["passengerData"]["passengerLocation"]["lng"],
+                }
+                trip.available_seats -= 1
 
-            }
+                passenger_user.save()
+                trip.save()
 
-            passenger_user.save()
-            trip.save()
+                trip_data = model_to_dict(trip)
+                return Response({"trip_data": trip_data}, status=status.HTTP_200_OK)
 
-
+            return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Passenger does not exist"}, status=status.HTTP_404_NOT_FOUND)
+    return Response(status=status.HTTP_400_BAD_REQUEST)

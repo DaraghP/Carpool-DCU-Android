@@ -64,15 +64,18 @@ export function removeFirebaseTrip(status, tripID) {
 
 export function storeTripRequest(tripID, passengerData) {
     const db = getDatabase();
-    console.log("passnegerID store", passengerData.passengerID)
-    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: passengerData});
+    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData, status: "waiting"}});
 }
 
-export function acceptTripRequest(tripID, passengerID) {
+export function acceptTripRequest(tripID, passengerData) {
     const db = getDatabase();
-    console.log("passengerID", passengerID);
-    remove(ref(db, `/tripRequests/${tripID}/${passengerID}`));
-    update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerID}`]: {passengerId: passengerID}});
+    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData, status: "accepted"}});
+    update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerData.passengerID}`]: {passengerId: passengerData.passengerID}});
+}
+
+export function removeTripRequest(tripID, passengerID) {
+    const db = getDatabase();
+    remove(ref(db, `/tripRequests/${tripID}/passengers/${passengerID}`));
 }
 
 export function setupTripRequestListener(tripId) {
