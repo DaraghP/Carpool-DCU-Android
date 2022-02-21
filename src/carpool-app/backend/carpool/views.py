@@ -70,20 +70,16 @@ def login(request):
             if carpool_user is not None:
                 django_login(request, carpool_user)
                 token, created = Token.objects.get_or_create(user=carpool_user)
-                driver = Driver.objects.filter(uid=carpool_user.id)
 
                 trip = {}
                 user_status = "available"
-                if driver.exists():
-                    driver = driver.get(uid=carpool_user.id)
 
-                    if Trip.objects.filter(driver_id=driver.id).exists():
-                        trip = model_to_dict(Trip.objects.get(driver_id=driver.id))
+                if carpool_user.current_trip is not None:
+                    trip = model_to_dict(carpool_user.current_trip)
+                    if carpool_user.id == carpool_user.current_trip.driver_id.uid.id:
                         user_status = "driver_busy"
-                # if passenger trip exists:
-                #    user_status = "passenger_busy"
-                else:
-                    user_status = "available"
+                    else:
+                        user_status = "passenger_busy"
 
                 return Response({
                     "id": carpool_user.id,

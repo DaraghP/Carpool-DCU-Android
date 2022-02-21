@@ -5,10 +5,9 @@ import {v4} from "uuid";
 import {GOOGLE_API_KEY} from "@env";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import {updateStatus, updateUserState} from "../reducers/user-reducer";
+import {updateStatus, updateUserState, updateTripRequestStatus} from "../reducers/user-reducer";
 import {
     setNumberOfWaypoints,
-    resetTripState,
     setDistance,
     setDuration,
     setAvailableSeats,
@@ -56,9 +55,10 @@ function MapScreen() {
     const [showPassengerRequestsModal, setShowPassengerRequestsModal] = useState(false);
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
-    const [passengerTripRequestStatus, setPassengerTripRequestStatus] = useState<string>("");
     const [isPassengerInTrip, setIsPassengerInTrip] = useState<boolean>(false);
-
+    const [previousTripID, setPreviousTripID] = useState();
+//
+//
     // firebase db
     const db = getDatabase();
 
@@ -70,6 +70,7 @@ function MapScreen() {
         setIsPanelActive(false);
     };
 
+    // for driver only
     const increaseWaypoints = () => {
         let activeWaypoints = Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
                                 .map((key) => trips.locations[key].marker.description);
@@ -191,7 +192,6 @@ function MapScreen() {
 
     // for driver only
     const acceptRequest = (passengerID) => {
-        acceptTripRequest(trips.id, firebaseTripsVal.data.tripRequests[passengerID]);
         fetch(`${backendURL}/add_passenger_to_trip`, {
             method: "POST",
             headers: {
@@ -225,10 +225,9 @@ function MapScreen() {
                         ...res.trip_data["waypoints"],//
                     },
                     availableSeats: res.trip_data["available_seats"],
-                    numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length //
+                    numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
                 }))
-
-                // console.log(res.trip_data)
+                acceptTripRequest(trips.id, firebaseTripsVal.data.tripRequests[passengerID]);
             }
             else {
                 console.log(res.error);
@@ -275,8 +274,6 @@ function MapScreen() {
         }
     }
 
-    const [previousTripID, setPreviousTripID] = useState();
-
     useEffect(() => {
         setPreviousTripID(trips.id);
     }, [])
@@ -295,11 +292,11 @@ function MapScreen() {
                     data: {...tempFbTripsVal.data, tripRequests: snapshot.val()}
                 };
 
-                if (trips.role === "passenger" && typeof snapshot.val() === "object" && snapshot.val() !== null) {
-                    if (user.id in snapshot.val()) {
-                        setPassengerTripRequestStatus(snapshot.val()[user.id].status);
-                    }
-                }
+                // if (trips.role === "passenger" && typeof snapshot.val() === "object" && snapshot.val() !== null) {
+                //     if (user.id in snapshot.val()) {
+                //         setPassengerTripRequestStatus(snapshot.val()[user.id].status);
+                //     }
+                // }
 
                 setFirebaseTripsVal(tempFbTripsVal);
 
@@ -321,29 +318,28 @@ function MapScreen() {
 
                 if (trips.role === "passenger" && typeof snapshot.val() === "object" && snapshot.val() !== null) {
                     if (user.id in snapshot.val()) {
-                        // console.log(user.id in snapshot.val(), snapshot.val(), user.id)
                         setIsPassengerInTrip(true);
                     }
                     else {
                         setIsPassengerInTrip(false);
                     }
                 }
-
             })
-        }//
+
+            onValue(ref(db, `/users/${user.id}/tripRequested`), (snapshot) => {
+                if (snapshot.val() !== null) {
+                    dispatch(updateTripRequestStatus(snapshot.val().status));
+                }
+                else {
+                    dispatch(updateTripRequestStatus(undefined));
+                }
+            })
+        }
     }, [trips.id, previousTripID])
 
 
     useEffect(() => {
-
-        if (trips.role === "passenger" && passengerTripRequestStatus === "accepted") {
-            //
-            // if (!isPassengerInTrip && !firebaseTripsVal.data.tripRequests) {
-            //     setPassengerTripRequestStatus(false);
-            // }
-            // else if (!isPassengerInTrip && !(user.id in firebaseTripsVal.data.tripRequests)) {
-            //     setPassengerTripRequestStatus(false);//
-            // }
+        if (trips.role === "passenger" && user.tripRequestStatus === "accepted") {
 
             if (firebaseTripsVal.data.trip.passengers !== null) {
                 if (user.id in firebaseTripsVal.data.trip.passengers) {
@@ -360,7 +356,9 @@ function MapScreen() {
                         .then((res) => {
                             if (!("error" in res)) {
                                 console.log(res.trip_data);
+                                //
                                 dispatch(updateUserState({status: "passenger_busy"}))
+                                dispatch(updateTripRequestStatus("accepted"));
                                 Object.keys(res.trip_data["waypoints"]).map((key) => {
                                     res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
                                 });
@@ -378,14 +376,14 @@ function MapScreen() {
                                     timeOfDeparture: res.trip_data["time_of_departure"],
                                     numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
                                 }))
-
+                                console.log(trips.id, user.id);
                                 removeTripRequest(trips.id, user.id);
                                 setIsPassengerInTrip(true);
-                                setPassengerTripRequestStatus("");
+                                dispatch(updateTripRequestStatus(""));
                             }
                             else {
                                 setIsPassengerInTrip(false);
-                                setPassengerTripRequestStatus("error");
+                                dispatch(updateTripRequestStatus("error"));
                                 console.log(res.error);
                             }
                         })
@@ -396,8 +394,7 @@ function MapScreen() {
         else {
             // passenger has been denied their request
         }
-
-    }, [passengerTripRequestStatus, firebaseTripsVal.data.trip.passengers])
+    }, [user.tripRequestStatus, firebaseTripsVal.data.trip.passengers])
 
     useEffect(() => {
         onMapReadyHandler();
@@ -572,7 +569,7 @@ function MapScreen() {
 
           {trips.role === "passenger" &&
               <>
-                  {passengerTripRequestStatus === "" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+                  {user.tripRequestStatus === undefined && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                       <Button onPress={() => {
                           openPanel();
                           searchTrips();
@@ -611,8 +608,8 @@ function MapScreen() {
                                               onPress={() => {
                                                   setPreviousTripID(trips.id);
                                                   dispatch(updateTripState({id: tripsFound[tripKey].pk}));
-                                                  setPassengerTripRequestStatus("waiting");
-                                                  dispatch(updateStatus("passenger_waiting"));
+                                                  dispatch(updateTripRequestStatus("waiting"));
+                                                  dispatch(updateStatus("passenger_busy"));
 
                                                   let passengerData = {
                                                       passengerID: user.id,
@@ -668,7 +665,7 @@ function MapScreen() {
                                  {firebaseTripsVal.data.tripRequests &&
                                      Object.keys(firebaseTripsVal.data.tripRequests).map((key, index) => {
                                          return (
-                                            <TouchableOpacity key={v4()}>
+                                             <TouchableOpacity key={v4()}>
                                                 <Flex key={v4()} direction="row" wrap="wrap">
                                                     <Text ml="5">{firebaseTripsVal.data.tripRequests[key].name}</Text>
                                                     <Button onPress={() => {acceptRequest(key)}}>Accept</Button>
@@ -687,10 +684,18 @@ function MapScreen() {
              </>
           }
 
-          {user.status === "passenger_waiting" &&
+
+          {trips.role === "passenger" && user.tripRequestStatus === "waiting" &&
               <>
-                <Button>Request Sent</Button>
-                <Text>Awaiting Response from Driver</Text>
+                <Button>Request Sent to user.tripRequest.driverName</Button>
+                <Text>Awaiting Response from Driver </Text>
+              </>
+          }
+
+          {trips.role === "passenger" && user.tripRequestStatus === "accepted" &&
+              <>
+                <Button>Request Accepted!</Button>
+                <Text>Message drivername @ phonenumber </Text>
               </>
           }
       </View>

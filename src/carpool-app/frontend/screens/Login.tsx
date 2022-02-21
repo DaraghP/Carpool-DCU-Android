@@ -2,10 +2,10 @@ import {StyleSheet, View, Alert} from "react-native";
 import {Box, VStack, Button, Center, FormControl, Input, Heading, Stack} from "native-base";
 import {useEffect, useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {updateUserState} from "../reducers/user-reducer";
+import {updateUserState, updateTripRequestStatus} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector, createLocationObj} from "../hooks";
 import {setLocations, updateTripState} from "../reducers/trips-reducer";
-
+import {getDatabase, get, ref, child, query, orderByChild, equalTo} from "firebase/database";
 
 function LoginScreen({ navigation }) {
   const dispatch = useAppDispatch();
@@ -17,6 +17,8 @@ function LoginScreen({ navigation }) {
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
   const [errorFound, setErrorFound] = useState(false);
+
+  const db = getDatabase();
 
   const login = () => {
     if (usernameText === "" || passwordText === "") {
@@ -37,11 +39,27 @@ function LoginScreen({ navigation }) {
             usernameInput.current.clear();
             passwordInput.current.clear();
 
+            if (res.status === "passenger_busy") {
+                dispatch(updateUserState({tripRequestStatus: "accepted"}));
+            }
+
+            if (res.status === "available") {
+                get(ref(db, `/users/${res.id}`))
+                    .then((snapshot) => {
+                        console.log(snapshot.val()?.tripRequested.status);
+                        dispatch(updateTripRequestStatus(snapshot.val()?.tripRequested.status));
+
+                        if (snapshot.val()?.tripRequested.status) {
+                            dispatch(updateUserState({status: "passenger_busy"}));
+                        }
+                    })
+            }
+
             // navigates to home screen once globals.user.token updates
             dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token}));
 
 
-           Object.keys(res.trip_data["waypoints"]).map((key) => {
+            Object.keys(res.trip_data["waypoints"]).map((key) => {
                 res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
             });
 

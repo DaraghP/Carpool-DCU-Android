@@ -10,7 +10,8 @@ const initialState = {
     firstName: "",
     lastName: "",
     token: "",
-    status: "available"
+    status: "available",
+    tripRequestStatus: "",
 }
 
 export const updateUserState = createAction<object>("user/update_state");
@@ -18,6 +19,8 @@ export const updateUsername = createAction<string>("user/update_username");
 export const updateId = createAction<number>("user/update_id");
 export const updateToken = createAction<string>("user/update_token");
 export const updateStatus = createAction<string>("user/update_status");
+export const updateTripRequestStatus = createAction<string | undefined>("user/update_trip_request_status");
+
 
 export const UserSlice = createSlice({
     name: "user",
@@ -34,6 +37,9 @@ export const UserSlice = createSlice({
         },
         update_status(state, action) {
             state.status = action.payload;
+        },
+        update_trip_request_status(state, action) {
+            state.tripRequestStatus = action.payload;
         },
         update_token(state, action) {
             state.token = action.payload;

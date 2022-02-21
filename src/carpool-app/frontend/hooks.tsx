@@ -46,7 +46,6 @@ export function createFirebaseTrip(status, tripID, driverID) {
             driverID: driverID,
             passengers: {},
         })
-
         return true;
     }
 
@@ -56,7 +55,6 @@ export function createFirebaseTrip(status, tripID, driverID) {
 export function removeFirebaseTrip(status, tripID) {
     if (status !== "available") {
         const db = getDatabase();
-        console.log(status, tripID);
         const reference = ref(db, `trips/${tripID}`);
         remove(reference);
     }
@@ -64,23 +62,21 @@ export function removeFirebaseTrip(status, tripID) {
 
 export function storeTripRequest(tripID, passengerData) {
     const db = getDatabase();
-    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData, status: "waiting"}});
+    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
+    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, status: "waiting"}}});
 }
 
 export function acceptTripRequest(tripID, passengerData) {
     const db = getDatabase();
-    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData, status: "accepted"}});
+    // update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData, status: "accepted"}});
     update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerData.passengerID}`]: {passengerId: passengerData.passengerID}});
-}
-
-export function removeTripRequest(tripID, passengerID) {
-    const db = getDatabase();
-    remove(ref(db, `/tripRequests/${tripID}/passengers/${passengerID}`));
+    remove(ref(db, `/tripRequests/${tripID}/${passengerData.passengerID}`));
+    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, status: "accepted"}}})
 }
 
 export function setupTripRequestListener(tripId) {
     const db = getDatabase();
-    const reference = ref(db, `tripRequests/${tripId}`);
+    const reference = ref(db, `/tripRequests/${tripId}`);
     onValue(reference, (snapshot) => {
         console.log(snapshot);
     })
