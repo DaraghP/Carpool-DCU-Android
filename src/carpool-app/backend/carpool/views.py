@@ -337,3 +337,22 @@ def add_passenger_to_trip(request):  # request.data = {tripID: A, passengerData 
             return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"error": "Passenger does not exist"}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def end_trip(request):
+    if request.method == "POST":
+        trip_id = request.data.get("tripID")
+        if Trip.objects.filter(id=trip_id).exists():
+            people = CarpoolUser.objects.filter(current_trip=trip_id)
+            ids_list = []
+            for user in people:
+                ids_list.append(user.id)
+                user.current_trip = None
+                user.save()
+            return Response({"uids": ids_list}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Trip does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)

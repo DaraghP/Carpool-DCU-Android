@@ -46,10 +46,10 @@ function LoginScreen({ navigation }) {
             if (res.status === "available") {
                 get(ref(db, `/users/${res.id}`))
                     .then((snapshot) => {
-                        // console.log(snapshot.val()?.tripRequested.status);
-                        dispatch(updateTripRequestStatus(snapshot.val()?.tripRequested.status));
 
-                        if (snapshot.val()?.tripRequested.status) {
+                        dispatch(updateTripRequestStatus(snapshot.val()?.tripRequested.requestStatus));
+
+                        if (snapshot.val()?.tripRequested.requestStatus) {
                             dispatch(updateUserState({status: "passenger_busy"}));
                         }
                     })

@@ -1,6 +1,6 @@
 import {TypedUseSelectorHook, useDispatch, useSelector} from "react-redux";
 import {AppDispatch, RootState} from "./store";
-import {getDatabase, ref, set, onValue, remove, update} from "firebase/database";
+import {getDatabase, ref, get, set, onValue, remove, update} from "firebase/database";
 
 
 // redux typescript hooks
@@ -52,31 +52,43 @@ export function createFirebaseTrip(status, tripID, driverID) {
     return false;
 }
 
-export function removeFirebaseTrip(status, tripID) {
-    if (status !== "available") {
-        const db = getDatabase();
-        const reference = ref(db, `trips/${tripID}`);
-        remove(reference);
-    }
+export function removeFirebaseTrip(tripID, uids) {
+
+    const db = getDatabase();
+
+    uids.map((uid) => {
+        update(ref(db, `/users/`), {[`/${uid}`]: {tripRequested: {tripID: null, requestStatus: "", status: "trip_complete"}}});
+    });
+    
+    remove(ref(db, `/trips/${tripID}`));
 }
 
 export function storeTripRequest(tripID, passengerData) {
     const db = getDatabase();
+
     update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
-    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, status: "waiting"}}});
+    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "waiting", status: ""}}});
 }
 
 export function acceptTripRequest(tripID, passengerData) {
     const db = getDatabase();
-    // update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData, status: "accepted"}});
+
     update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerData.passengerID}`]: {passengerId: passengerData.passengerID}});
     remove(ref(db, `/tripRequests/${tripID}/${passengerData.passengerID}`));
-    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, status: "accepted"}}})
+    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "accepted", status: "in_trip"}}})
+}
+
+export function declineTripRequest(tripID, passengerID) {
+    const db = getDatabase();
+
+    remove(ref(db, `/tripRequests/${tripID}/${passengerID}`));
+    update(ref(db, `/users/`), {[`/${passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "declined", status: ""}}});
 }
 
 export function setupTripRequestListener(tripId) {
     const db = getDatabase();
     const reference = ref(db, `/tripRequests/${tripId}`);
+
     onValue(reference, (snapshot) => {
         console.log(snapshot);
     })

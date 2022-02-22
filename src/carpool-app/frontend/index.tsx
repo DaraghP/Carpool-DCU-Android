@@ -18,12 +18,11 @@ const Tab = createBottomTabNavigator();
 export default function Index() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(state => state.user);
-  const globals = useAppSelector(state => state.globals);
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
 
 
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://954a-46-7-17-96.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://0002-2001-bb6-6792-1a00-bc7a-b376-9b9b-785a.ngrok.io"}));
   }, [])
  
   useEffect(() => {

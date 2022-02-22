@@ -5,7 +5,7 @@ import {v4} from "uuid";
 import {GOOGLE_API_KEY} from "@env";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import {updateStatus, updateUserState, updateTripRequestStatus} from "../reducers/user-reducer";
+import {updateStatus, updateUserState, updateTripRequestStatus, updateTripStatus} from "../reducers/user-reducer";
 import {
     setNumberOfWaypoints,
     setDistance,
@@ -20,7 +20,7 @@ import {
     useAppDispatch,
     useAppSelector,
     createFirebaseTrip,
-    removeFirebaseTrip, acceptTripRequest, createLocationObj, removeTripRequest
+    removeFirebaseTrip, acceptTripRequest, declineTripRequest, createLocationObj,
 } from "../hooks";
 import {
     Button,
@@ -40,7 +40,7 @@ import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocomplet
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import {getDatabase, onValue, off, ref} from "firebase/database";
+import {getDatabase, onValue, off, ref, update} from "firebase/database";
 
 // @ts-ignore
 import getDirections from "react-native-google-maps-directions";
@@ -151,6 +151,28 @@ function MapScreen() {
                     }
                 })
         }
+    }
+
+    // for driver only
+    const endTrip = () => {
+        fetch(`${backendURL}/end_trip`, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${user.token}`
+            },
+            body: JSON.stringify({tripID: trips.id})
+        }).then(response => response.json())
+        .then(res => { //
+            if (!("errorType" in res)) {
+                console.log("Driver ended trip");
+                removeFirebaseTrip(trips.id, res.uids); //
+            }
+            else {
+                console.log(res.errorType, res.errorMessage);
+            }
+        })
     }
 
     // for passenger only
@@ -292,6 +314,11 @@ function MapScreen() {
     }
 
     // for driver only
+    const declineRequest = (passengerID) => {
+        declineTripRequest(trips.id, passengerID);
+    }
+
+    // for driver only
     const cancelTrip = () => {
         // console.log("Trip Cancelled.");
 
@@ -347,12 +374,6 @@ function MapScreen() {
                     data: {...tempFbTripsVal.data, tripRequests: snapshot.val()}
                 };
 
-                // if (trips.role === "passenger" && typeof snapshot.val() === "object" && snapshot.val() !== null) {
-                //     if (user.id in snapshot.val()) {
-                //         setPassengerTripRequestStatus(snapshot.val()[user.id].status);
-                //     }
-                // }
-
                 setFirebaseTripsVal(tempFbTripsVal);
 
             })
@@ -382,21 +403,25 @@ function MapScreen() {
                 }
             })
 
+
             onValue(ref(db, `/users/${user.id}/tripRequested`), (snapshot) => {
                 if (!passengerGotInitialMapData) {
                     if (snapshot.val() !== null) {
                         if (trips.id === undefined) {
                             dispatch(updateTripState({id: snapshot.val().tripID}));
                         }
-
-                        dispatch(updateTripRequestStatus(snapshot.val().status));
+                        //
+//
+                        dispatch(updateTripRequestStatus(snapshot.val().requestStatus));
+                        dispatch(updateTripStatus(snapshot.val().status));
                     }
                     else {
                         dispatch(updateTripRequestStatus(undefined));
+                        dispatch(updateTripStatus(undefined));
                     }
                 }
             })
-        }
+        } //
     }, [trips.id, previousTripID])
 
     useEffect(() => {
@@ -419,10 +444,8 @@ function MapScreen() {
             getOrJoinTrip();
         }
     }, [firebaseTripsVal.data.trip.passengers])
-    // useEffect(() => {
-    //     console.log("Map handler called", trips.role);
-    //     // onMapReadyHandler();//
-    // }, [trips.numberOfWaypoints, trips.distance, trips.duration])
+
+
 
   return (
       <View key={v4()} style={styles.container}>
@@ -718,21 +741,22 @@ function MapScreen() {
 
                       <Text>ETA: </Text>{/* timeofDeparture + duration*/}
                       <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
-                          return(<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}</Text>)
-                      })
-                      }</Text>
-                     <Text>{trips.availableSeats} Empty seats</Text>
+                          return(<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>)
+                        })
+                      }
+                      </Text>
+
+                      <Text>{trips.availableSeats} Empty seats</Text>
                       <Button onPress={() => {setShowPassengerRequestsModal(true)}}>Passenger Requests +1</Button>
                       <Button>View Route</Button>
+                      <Button onPress={() => {endTrip()}}>Trip Complete</Button>
                       <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
-                      <Button>Trip Complete</Button>
                  </View>
                  <Modal isOpen={showPassengerRequestsModal} onClose={() => {setShowPassengerRequestsModal(false)}}>
                      <Modal.Content size="sm">
                          <Modal.CloseButton/>
                          <Modal.Header>Requests</Modal.Header>
                          <Modal.Body>
-
                             <VStack>
                                  {firebaseTripsVal.data.tripRequests &&
                                      Object.keys(firebaseTripsVal.data.tripRequests).map((key, index) => {
@@ -741,8 +765,9 @@ function MapScreen() {
                                                 <Flex key={v4()} direction="row" wrap="wrap">
                                                     <Text ml="5">{firebaseTripsVal.data.tripRequests[key].name}</Text>
                                                     <Button onPress={() => {acceptRequest(key)}}>Accept</Button>
-                                                    <Button onPress={() => {console.log("decline trip request");}}>Decline</Button>
+                                                    <Button onPress={() => {declineRequest(key)}}>Decline</Button>
                                                 </Flex>
+
                                             </TouchableOpacity>
                                             // <Button key={v4()} onPress={() => acceptRequest(key)}>{firebaseTripsVal.data.tripRequests[key].name}</Button>
                                         )
@@ -770,8 +795,56 @@ function MapScreen() {
                 <Text>Message drivername @ phonenumber </Text>
               </>
           }
+
+          {trips.role === "passenger" && user.tripRequestStatus === "declined" &&
+              <>
+                <Button>Request Declined!</Button>
+                <Button onPress={() => {
+                    update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
+                    dispatch(updateStatus("available"))
+                }}>
+                    OK
+                </Button>
+
+                <Text>Message drivername @ phonenumber</Text>
+              </>
+          }
+
+
+          {trips.role === "passenger" && user.tripStatus == "trip_complete" &&
+              <>
+                <Button>Trip Ended</Button>
+                <Button 
+                    onPress={() => {
+                        dispatch(updateUserState({status: "available", tripStatus: ""}));
+                        update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
+
+                    }}
+                >
+                    OK
+                </Button>
+                <Text>Trip has been ended by driver.</Text>
+                <Text>Request a new trip on passenger screen</Text>
+              </>
+          }
+
+          {trips.role === "driver" && user.tripStatus == "trip_complete" &&
+              <>
+                <Button>Trip Ended</Button>
+                <Button
+                    onPress={() => {
+                        dispatch(updateUserState({status: "available", tripStatus: ""}));
+                        update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
+                    }}
+                >
+                    OK
+                </Button>
+                <Text>Trip has been ended.</Text>
+                <Text>Create a new trip on driver screen</Text>
+              </>
+          }
       </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
