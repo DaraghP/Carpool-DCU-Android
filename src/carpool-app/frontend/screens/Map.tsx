@@ -1,4 +1,4 @@
-import {StyleSheet, View, ScrollView, SafeAreaView, TouchableOpacity} from "react-native";
+import {StyleSheet, View, ScrollView, SafeAreaView, TouchableOpacity, Alert as SystemAlert} from "react-native";
 import {useEffect, useRef, useState} from "react";
 import "react-native-get-random-values";
 import {v4} from "uuid";
@@ -42,6 +42,9 @@ import {SwipeablePanel} from "rn-swipeable-panel";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {getDatabase, onValue, off, ref} from "firebase/database";
 
+// @ts-ignore
+import getDirections from "react-native-google-maps-directions";
+
 // TODO: Refactor
 function MapScreen() {
     const dispatch = useAppDispatch();
@@ -50,6 +53,8 @@ function MapScreen() {
     const backendURL = useAppSelector(state => state.globals.backendURL);
     const mapRef = useRef(null);
 
+    const [passengerGotInitialMapData, setPassengerGotInitialMapData] = useState(false);
+    const [isRouteTapped, setIsRouteTapped] = useState(false);
     const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null, data: {trip: {status: "waiting", passengers: {}}, tripRequests: {}}});
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
     const [showPassengerRequestsModal, setShowPassengerRequestsModal] = useState(false);
@@ -190,6 +195,56 @@ function MapScreen() {
         })
     }
 
+    // for passenger only
+    const getOrJoinTrip = () => {
+        fetch(`${backendURL}/join_trip`, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${user.token}`
+            },
+            body: JSON.stringify({tripID: trips.id})
+        }).then(response => response.json())
+            .then((res) => {
+                if (!("error" in res)) {
+                    // console.log(res.trip_data);
+                    //
+
+                    Object.keys(res.trip_data["waypoints"]).map((key) => {
+                        res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
+                    });
+
+
+                    dispatch(updateTripState({
+                        ...res.trip_data,
+                        locations: {
+                            ...trips.locations,
+                            startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"].lat, lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
+                            destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: res.trip_data["destination"].lat, lng: res.trip_data["destination"].lng}, res.trip_data["destination"].name, true),
+                            ...res.trip_data["waypoints"],
+                        },
+                        availableSeats: res.trip_data["available_seats"],
+                        timeOfDeparture: res.trip_data["time_of_departure"],
+                        numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
+                    }))
+                    // console.log(trips.id, user.id);
+                    // removeTripRequest(trips.id, user.id);
+                    // dispatch(updateTripRequestStatus(""));
+                    if (!passengerGotInitialMapData) {
+                        setIsPassengerInTrip(true);
+                        setPassengerGotInitialMapData(true);
+                        dispatch(updateUserState({status: "passenger_busy"}));
+                    }
+                }
+                else {
+                    setIsPassengerInTrip(false);
+                    // dispatch(updateTripRequestStatus("error"));
+                    console.log(res.error);
+                }
+            })
+    }
+
     // for driver only
     const acceptRequest = (passengerID) => {
         fetch(`${backendURL}/add_passenger_to_trip`, {
@@ -313,6 +368,7 @@ function MapScreen() {
                         }
                     }
                 }
+                // console.log(snapshot.val());
 
                 setFirebaseTripsVal(tempFbTripsVal)
 
@@ -327,78 +383,46 @@ function MapScreen() {
             })
 
             onValue(ref(db, `/users/${user.id}/tripRequested`), (snapshot) => {
-                if (snapshot.val() !== null) {
-                    dispatch(updateTripRequestStatus(snapshot.val().status));
-                }
-                else {
-                    dispatch(updateTripRequestStatus(undefined));
+                if (!passengerGotInitialMapData) {
+                    if (snapshot.val() !== null) {
+                        if (trips.id === undefined) {
+                            dispatch(updateTripState({id: snapshot.val().tripID}));
+                        }
+
+                        dispatch(updateTripRequestStatus(snapshot.val().status));
+                    }
+                    else {
+                        dispatch(updateTripRequestStatus(undefined));
+                    }
                 }
             })
         }
     }, [trips.id, previousTripID])
 
-
     useEffect(() => {
-        if (trips.role === "passenger" && user.tripRequestStatus === "accepted") {
-
-            if (firebaseTripsVal.data.trip.passengers !== null) {
+        if (trips.role === "passenger" && user.tripRequestStatus === "accepted" && !passengerGotInitialMapData) {
+            console.log(firebaseTripsVal.data.trip, trips.id)//
+            if (firebaseTripsVal.data.trip.passengers !== null) {//
                 if (user.id in firebaseTripsVal.data.trip.passengers) {
                     console.log("passenger in trip!");
-                    fetch(`${backendURL}/join_trip`, {
-                        method: "POST",
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'Authorization': `Token ${user.token}`
-                        },
-                        body: JSON.stringify({tripID: trips.id})
-                    }).then(response => response.json())
-                        .then((res) => {
-                            if (!("error" in res)) {
-                                console.log(res.trip_data);
-                                //
-                                dispatch(updateUserState({status: "passenger_busy"}))
-                                dispatch(updateTripRequestStatus("accepted"));
-                                Object.keys(res.trip_data["waypoints"]).map((key) => {
-                                    res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
-                                });
-
-
-                                dispatch(updateTripState({
-                                    ...res.trip_data,
-                                    locations: {
-                                        ...trips.locations,
-                                        startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"].lat, lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
-                                        destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: res.trip_data["destination"].lat, lng: res.trip_data["destination"].lng}, res.trip_data["destination"].name, true),
-                                        ...res.trip_data["waypoints"],
-                                    },
-                                    availableSeats: res.trip_data["available_seats"],
-                                    timeOfDeparture: res.trip_data["time_of_departure"],
-                                    numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
-                                }))
-                                console.log(trips.id, user.id);
-                                removeTripRequest(trips.id, user.id);
-                                setIsPassengerInTrip(true);
-                                dispatch(updateTripRequestStatus(""));
-                            }
-                            else {
-                                setIsPassengerInTrip(false);
-                                dispatch(updateTripRequestStatus("error"));
-                                console.log(res.error);
-                            }
-                        })
+                    getOrJoinTrip();
                 }
-
             }
         }
         else {
             // passenger has been denied their request
-        }
-    }, [user.tripRequestStatus, firebaseTripsVal.data.trip.passengers])
+        }//
+    }, [user.tripRequestStatus])//
 
     useEffect(() => {
-        onMapReadyHandler();
-    }, [trips.numberOfWaypoints, trips.distance, trips.duration])
+        if (passengerGotInitialMapData) {
+            getOrJoinTrip();
+        }
+    }, [firebaseTripsVal.data.trip.passengers])
+    // useEffect(() => {
+    //     console.log("Map handler called", trips.role);
+    //     // onMapReadyHandler();//
+    // }, [trips.numberOfWaypoints, trips.distance, trips.duration])
 
   return (
       <View key={v4()} style={styles.container}>
@@ -494,7 +518,6 @@ function MapScreen() {
                       onMapReady={onMapReadyHandler}
                   >
                       {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
-
                           <MapViewDirections
                               origin={trips.locations.startingLocation.marker.description}
                               destination={trips.locations.destLocation.marker.description}
@@ -526,18 +549,67 @@ function MapScreen() {
                               }}
                               apikey={GOOGLE_API_KEY}
                               strokeWidth={3}
-                              strokeColor="black"
+                              strokeColor={isRouteTapped ? "red" : "black"}
+                              tappable={true}
+                              onPress={() => {
+                                  if (trips.role === "driver") {
+                                      setIsRouteTapped(true);
+                                      SystemAlert.alert("Get Directions?", "Tapping yes will get directions from the Google Maps App, or through your default browser.",
+                                          [
+                                            {
+                                                text: "Yes",
+                                                onPress: () => {
+                                                    let waypoints: { latitude: any; longitude: any; }[] = []
+                                                    Object.keys(trips.locations).sort().map((locationKey) => {
+                                                        if (trips.locations[locationKey].type === "waypoint" && trips.locations[locationKey].info.isEntered === true) {
+                                                            waypoints.push({latitude: trips.locations[locationKey].info.coords.lat, longitude: trips.locations[locationKey].info.coords.lng})
+                                                        }
+                                                    })
+
+
+                                                    setIsRouteTapped(false);
+                                                    const tripData = {
+                                                        source: {
+                                                          latitude: trips.locations.startingLocation.info.coords.lat,
+                                                          longitude: trips.locations.startingLocation.info.coords.lng
+                                                        },
+                                                        destination: {
+                                                          latitude: trips.locations.destLocation.info.coords.lat,
+                                                          longitude: trips.locations.destLocation.info.coords.lng
+                                                        },
+                                                        params: [
+                                                            {
+                                                                key: "travelmode",
+                                                                value: "driving"
+                                                            }
+                                                        ],
+                                                        waypoints: waypoints
+                                                    }
+
+                                                    getDirections(tripData);
+                                                }
+                                            },
+                                            {
+                                                text: "No",
+                                                onPress: () => {
+                                                    setIsRouteTapped(false);
+                                                }
+                                            }
+                                          ]
+                                      )}
+                                  }
+                              }
                           />
 
                       )}
 
                       {trips.locations.startingLocation.info.isEntered && (
                           <Marker {...trips.locations.startingLocation.marker}/>
-                          )}
+                      )}
 
                       {trips.locations.destLocation.info.isEntered && (
                           <Marker {...trips.locations.destLocation.marker}/>
-                          )}
+                      )}
 
                       {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
                           Object.keys(trips.locations).sort().map((key) => {
