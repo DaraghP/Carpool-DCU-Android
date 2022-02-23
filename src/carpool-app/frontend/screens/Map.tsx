@@ -12,7 +12,7 @@ import {
     setDuration,
     setAvailableSeats,
     setTimeOfDeparture,
-    updateTripState
+    updateTripState, resetTripState
 } from "../reducers/trips-reducer";
 import {
     storeTripRequest,
@@ -44,6 +44,7 @@ import {getDatabase, onValue, off, ref, update} from "firebase/database";
 
 // @ts-ignore
 import getDirections from "react-native-google-maps-directions";
+import TripAlertModal from "../components/TripAlertModal";
 
 // TODO: Refactor
 function MapScreen() {
@@ -54,6 +55,7 @@ function MapScreen() {
     const mapRef = useRef(null);
 
     const [passengerGotInitialMapData, setPassengerGotInitialMapData] = useState(false);
+    const [resetedAfterTripComplete, setResetedAfterTripComplete] = useState(false);
     const [isRouteTapped, setIsRouteTapped] = useState(false);
     const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null, data: {trip: {status: "waiting", passengers: {}}, tripRequests: {}}});
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
@@ -61,7 +63,9 @@ function MapScreen() {
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
     const [isPassengerInTrip, setIsPassengerInTrip] = useState<boolean>(false);
-    const [previousTripID, setPreviousTripID] = useState();
+    const [previousTripID, setPreviousTripID] = useState(null);
+    const [tripEndModal, setTripEndModal] = useState(false);
+
 //
 //
     // firebase db
@@ -167,7 +171,7 @@ function MapScreen() {
         .then(res => { //
             if (!("errorType" in res)) {
                 console.log("Driver ended trip");
-                removeFirebaseTrip(trips.id, res.uids); //
+                removeFirebaseTrip(trips.id, res.uids);
             }
             else {
                 console.log(res.errorType, res.errorMessage);
@@ -410,10 +414,17 @@ function MapScreen() {
                         if (trips.id === undefined) {
                             dispatch(updateTripState({id: snapshot.val().tripID}));
                         }
-                        //
-//
+
                         dispatch(updateTripRequestStatus(snapshot.val().requestStatus));
                         dispatch(updateTripStatus(snapshot.val().status));
+
+                        // console.log(snapshot.val(), "test")
+                        if (snapshot.val().status === "trip_complete" && !resetedAfterTripComplete) {
+                            dispatch(updateUserState({status: "available", tripRequestStatus: undefined}))
+                            dispatch(resetTripState());//
+                            setResetedAfterTripComplete(true);
+                            setTripEndModal(true);
+                        }
                     }
                     else {
                         dispatch(updateTripRequestStatus(undefined));
@@ -445,8 +456,9 @@ function MapScreen() {
         }
     }, [firebaseTripsVal.data.trip.passengers])
 
-
-
+    useEffect(() => {
+        console.log(tripEndModal, user.tripStatus)
+    }, [tripEndModal])
   return (
       <View key={v4()} style={styles.container}>
           <View style={{flex: 1, elevation: -1, zIndex: -1}}>
@@ -662,7 +674,7 @@ function MapScreen() {
               <Text>Distance: {distance}</Text>
               <Text>Duration: {duration}</Text>  */}
 
-          {trips.role === "passenger" &&
+          {trips.role === "passenger" && user.status === "available" &&
               <>
                   {user.tripRequestStatus === undefined && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                       <Button onPress={() => {
@@ -809,40 +821,24 @@ function MapScreen() {
                 <Text>Message drivername @ phonenumber</Text>
               </>
           }
+          {/**/}
 
-
-          {trips.role === "passenger" && user.tripStatus == "trip_complete" &&
-              <>
-                <Button>Trip Ended</Button>
-                <Button 
-                    onPress={() => {
+          {user.tripStatus == "trip_complete" && tripEndModal &&
+              <TripAlertModal
+                  headerText="Trip Alert"
+                  bodyText="Your previous trip has ended"
+                  btnAction={{
+                      action: () => {
                         dispatch(updateUserState({status: "available", tripStatus: ""}));
                         update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
-
-                    }}
-                >
-                    OK
-                </Button>
-                <Text>Trip has been ended by driver.</Text>
-                <Text>Request a new trip on passenger screen</Text>
-              </>
+                        setResetedAfterTripComplete(false);
+                        setTripEndModal(false);
+                      },
+                      text: "OK"
+                  }}
+              />
           }
 
-          {trips.role === "driver" && user.tripStatus == "trip_complete" &&
-              <>
-                <Button>Trip Ended</Button>
-                <Button
-                    onPress={() => {
-                        dispatch(updateUserState({status: "available", tripStatus: ""}));
-                        update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
-                    }}
-                >
-                    OK
-                </Button>
-                <Text>Trip has been ended.</Text>
-                <Text>Create a new trip on driver screen</Text>
-              </>
-          }
       </View>
   );
 }

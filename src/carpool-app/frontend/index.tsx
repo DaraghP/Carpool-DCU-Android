@@ -22,7 +22,7 @@ export default function Index() {
 
 
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://0002-2001-bb6-6792-1a00-bc7a-b376-9b9b-785a.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://1d47-46-7-17-96.ngrok.io"}));
   }, [])
  
   useEffect(() => {

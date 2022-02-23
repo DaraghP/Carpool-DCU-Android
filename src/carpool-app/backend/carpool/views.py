@@ -349,8 +349,11 @@ def end_trip(request):
             ids_list = []
             for user in people:
                 ids_list.append(user.id)
+                user.status = "available"
                 user.current_trip = None
                 user.save()
+
+            Trip.objects.get(id=trip_id).delete()
             return Response({"uids": ids_list}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Trip does not exist."}, status=status.HTTP_404_NOT_FOUND)
