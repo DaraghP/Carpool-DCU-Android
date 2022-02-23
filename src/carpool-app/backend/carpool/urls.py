@@ -17,4 +17,5 @@ urlpatterns = [
     path("add_passenger_to_trip", views.add_passenger_to_trip, name="add-passenger-to-trip"),
     path("join_trip", views.join_trip, name="join-trip"),
     path("end_trip", views.end_trip, name="end-trip"),
+    path("passenger_leave_trip", views.passenger_leave_trip, name="passenger-leave-trip"),
 ]

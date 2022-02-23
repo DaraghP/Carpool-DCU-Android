@@ -40,7 +40,7 @@ import CreateGoogleAutocompleteInput from "../components/CreateGoogleAutocomplet
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {SwipeablePanel} from "rn-swipeable-panel";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import {getDatabase, onValue, off, ref, update} from "firebase/database";
+import {getDatabase, onValue, off, ref, update, remove} from "firebase/database";
 
 // @ts-ignore
 import getDirections from "react-native-google-maps-directions";
@@ -64,7 +64,6 @@ function MapScreen() {
     const [isPanelActive, setIsPanelActive] = useState(false);
     const [isPassengerInTrip, setIsPassengerInTrip] = useState<boolean>(false);
     const [previousTripID, setPreviousTripID] = useState(null);
-    const [tripEndModal, setTripEndModal] = useState(false);
 
 //
 //
@@ -370,16 +369,33 @@ function MapScreen() {
         if (previousTripID !== null) {
             off(ref(db, `/tripRequests/${previousTripID}`));
             off(ref(db, `/trips/${previousTripID}/passengers/`));
+            off(ref(db, `/trips/${previousTripID}/status`));
             off(ref(db, `/trips/${previousTripID}`));
             setPreviousTripID(trips.id);
             onValue(ref(db, `/tripRequests/${trips.id}`), (snapshot) => {
                 tempFbTripsVal = {
                     ...tempFbTripsVal,
-                    data: {...tempFbTripsVal.data, tripRequests: snapshot.val()}
+                    data: {
+                        ...tempFbTripsVal.data, 
+                        tripRequests: snapshot.val()
+                    }
                 };
 
                 setFirebaseTripsVal(tempFbTripsVal);
+            })
 
+            onValue(ref(db, `/trips/${trips.id}/status`), (snapshot) => {
+                tempFbTripsVal = {
+                    ...tempFbTripsVal,
+                    data: {
+                        ...tempFbTripsVal.data,
+                        trip: {
+                            ...tempFbTripsVal.data.trip,
+                            status: snapshot.val()
+                        }
+                    }
+                }
+                setFirebaseTripsVal(tempFbTripsVal);
             })
 
             onValue(ref(db, `/trips/${trips.id}/passengers/`), (snapshot) => {
@@ -423,7 +439,6 @@ function MapScreen() {
                             dispatch(updateUserState({status: "available", tripRequestStatus: undefined}))
                             dispatch(resetTripState());//
                             setResetedAfterTripComplete(true);
-                            setTripEndModal(true);
                         }
                     }
                     else {
@@ -432,7 +447,7 @@ function MapScreen() {
                     }
                 }
             })
-        } //
+        }
     }, [trips.id, previousTripID])
 
     useEffect(() => {
@@ -456,9 +471,6 @@ function MapScreen() {
         }
     }, [firebaseTripsVal.data.trip.passengers])
 
-    useEffect(() => {
-        console.log(tripEndModal, user.tripStatus)
-    }, [tripEndModal])
   return (
       <View key={v4()} style={styles.container}>
           <View style={{flex: 1, elevation: -1, zIndex: -1}}>
@@ -517,7 +529,7 @@ function MapScreen() {
                               }}/>
                       </>
                   }
-                  {/*  */}
+                  
                   {firebaseTripsVal.data.tripRequests ?
                       user.status === "driver_busy" && Object.keys(firebaseTripsVal.data.tripRequests).length > 0 &&
                               <TouchableOpacity onPress={() => {
@@ -761,8 +773,16 @@ function MapScreen() {
                       <Text>{trips.availableSeats} Empty seats</Text>
                       <Button onPress={() => {setShowPassengerRequestsModal(true)}}>Passenger Requests +1</Button>
                       <Button>View Route</Button>
-                      <Button onPress={() => {endTrip()}}>Trip Complete</Button>
-                      <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
+
+                      <Button onPress={() => {update(ref(db, `/trips/${trips.id}/status`), {[`/status`]: "departed"})}}>START Trip</Button>
+                      
+                      {firebaseTripsVal.data.trips[trips.id].status === "departed" &&       
+                        <Button onPress={() => {endTrip()}}>Trip Complete</Button>
+                      }
+                      
+                      {firebaseTripsVal.data.trips[trips.id].status !== "departed" &&                    
+                        <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
+                      }
                  </View>
                  <Modal isOpen={showPassengerRequestsModal} onClose={() => {setShowPassengerRequestsModal(false)}}>
                      <Modal.Content size="sm">
@@ -798,13 +818,63 @@ function MapScreen() {
               <>
                 <Button>Request Sent to user.tripRequest.driverName</Button>
                 <Text>Awaiting Response from Driver </Text>
+                <Button variant="subtle"
+                    onPress={() => {
+                        remove(ref(db, `/tripRequests/${trips.id}/${user.id}`));
+                        update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}}) 
+                        dispatch(updateUserState({tripRequestStatus: "cancelled", status: "available"}));
+                        setPreviousTripID(trips.id);
+                        dispatch(updateTripState({id: null}))
+                    }}
+                >
+                    Cancel Request
+                </Button>
               </>
           }
 
-          {trips.role === "passenger" && user.tripRequestStatus === "accepted" &&
+          {trips.role === "passenger" &&
               <>
-                <Button>Request Accepted!</Button>
-                <Text>Message drivername @ phonenumber </Text>
+
+                {user.tripRequestStatus === "accepted" && user.tripStatus === "in_trip" &&
+                    <TripAlertModal
+                        headerText="Trip Alert"
+                        bodyText="Your trip request has been accepted"
+                        btnAction={{
+                            action: () => { 
+                                dispatch(updateUserState({tripRequestStatus: ""}));
+                                update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: {tripID: trips.id, requestStatus: "", status: "in_trip"}}});
+                            }, 
+                            text: "OK"
+                        }}
+                    />
+                }
+
+                {user.tripRequestStatus === "" && user.tripStatus === "in_trip" && 
+                    <Button onPress={() => {
+                        fetch(`${backendURL}/passenger_leave_trip`, {
+                            method: "GET",
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'Authorization': `Token ${user.token}`
+                            },
+                        }).then(response => response.json())
+                        .then(res => { //
+                            if (!("errorType" in res)) {
+                                remove(ref(db, `/users/${user.id}`));
+                                remove(ref(db, `/trips/${trips.id}/passengers/${user.id}`));
+                                dispatch(resetTripState())
+                                dispatch(updateUserState({status: "available", tripStatus: "", tripRequestStatus: ""})); 
+                            }
+                            else {
+                                console.log(res.errorType, res.errorMessage);
+                            }
+                        })
+                    }}>
+                        Cancel Trip
+                    </Button>
+                }
+                
               </>
           }
 
@@ -821,9 +891,8 @@ function MapScreen() {
                 <Text>Message drivername @ phonenumber</Text>
               </>
           }
-          {/**/}
 
-          {user.tripStatus == "trip_complete" && tripEndModal &&
+          {user.tripStatus == "trip_complete" &&
               <TripAlertModal
                   headerText="Trip Alert"
                   bodyText="Your previous trip has ended"
@@ -832,7 +901,8 @@ function MapScreen() {
                         dispatch(updateUserState({status: "available", tripStatus: ""}));
                         update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
                         setResetedAfterTripComplete(false);
-                        setTripEndModal(false);
+                        update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}});
+                        setResetedAfterTripComplete(false);
                       },
                       text: "OK"
                   }}

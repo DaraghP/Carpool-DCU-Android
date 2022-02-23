@@ -31,7 +31,7 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["1d47-46-7-17-96.ngrok.io", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["0664-2001-bb6-6792-1a00-f403-2944-e318-90f7.ngrok.io", "localhost", "127.0.0.1"]
 
 # Application definition
 

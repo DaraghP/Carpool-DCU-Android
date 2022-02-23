@@ -231,9 +231,14 @@ def get_trips(request):
         if passenger.status == "busy":
             return Response({"error": "You already have an ongoing trip."})
 
-        all_trips = Trip.objects.all()
-        sorted_trips = all_trips.order_by("time_of_departure") 
+        active_driver_users = CarpoolUser.objects.exclude(current_trip=None) 
 
+        active_trip_id_list = [driver.current_trip.id for driver in active_driver_users if driver.current_trip.id != None]
+        active_trips = Trip.objects.filter(id__in=active_trip_id_list)
+        
+        
+
+        sorted_trips = active_trips.order_by("time_of_departure") 
         trips_serialized = json.loads(django_serializers.serialize("json", sorted_trips))
 
         for index, trip in enumerate(trips_serialized):
@@ -244,7 +249,7 @@ def get_trips(request):
         directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
 
         # TODO: remove this later
-        if len(trips_serialized) < 1:
+        if len(trips_serialized) < 1: 
             return Response({}, status=status.HTTP_200_OK)
 
         if len(trips_serialized[0]["waypoints"]) < 1:
@@ -346,16 +351,61 @@ def end_trip(request):
         trip_id = request.data.get("tripID")
         if Trip.objects.filter(id=trip_id).exists():
             people = CarpoolUser.objects.filter(current_trip=trip_id)
+            
             ids_list = []
+            trip = Trip.objects.get(id=trip_id)
             for user in people:
                 ids_list.append(user.id)
                 user.status = "available"
                 user.current_trip = None
                 user.save()
 
-            Trip.objects.get(id=trip_id).delete()
+            trip.available_seats = len(people) - 1
+            trip.save()
+
+            # Trip.objects.get(id=trip_id).delete()
             return Response({"uids": ids_list}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Trip does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def passenger_leave_trip(request): # 
+    if request.method == "GET":
+        passenger = request.user
+        if passenger.current_trip != None:
+            trip = passenger.current_trip
+            
+            temp_passengers_dict = {**trip.passengers}
+            print(temp_passengers_dict)
+            for key, passenger in trip.passengers.items():
+            
+               temp_waypoints_dict = {**trip.waypoints}
+               if int(passenger["passengerID"]) == request.user.id: 
+                   print("Remove passenger: ", request.user.id)
+                   temp_passengers_dict.pop(key)
+                   passenger_location = passenger["passengerLocation"]
+                   for wkey, waypoint in trip.waypoints.items():
+                       if waypoint["name"] == passenger_location:
+                           print("Remove passenger waypoint")
+                           temp_waypoints_dict.pop(wkey)
+                   trip.waypoints = temp_waypoints_dict
+                   print("Remove waypoint: ", passenger_location)
+            
+            trip.passengers = temp_passengers_dict
+            
+            # TODO: update distance and duration when waypoint is removed 
+            trip.available_seats += 1
+            trip.save()
+
+            passenger.current_trip = None
+            passenger.status = "available"
+            passenger.save()
+            return Response({"success": "Passenger removed from trip."}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Passenger does not have an active trip."}, status=status.HTTP_204_NO_CONTENT)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
