@@ -20,11 +20,10 @@ export default function Index() {
   const user = useAppSelector(state => state.user);
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
 
-
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://0664-2001-bb6-6792-1a00-f403-2944-e318-90f7.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://1d47-46-7-17-96.ngrok.io"}));
   }, [])
- 
+
   useEffect(() => {
     if (user.token !== "") {
       setHideAuthTabs(true);

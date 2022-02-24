@@ -24,7 +24,7 @@ const initialState = {
     distance: "",
     duration: "",
     timeOfDeparture: "",
-    availableSeats: 0,
+    availableSeats: 1,
 }
 
 
@@ -68,7 +68,7 @@ export const TripsSlice = createSlice({
                 distance: "",
                 duration: "",
                 timeOfDeparture: "",
-                availableSeats: 0,
+                availableSeats: 1,
             };
 
         },

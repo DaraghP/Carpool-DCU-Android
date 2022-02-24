@@ -36,7 +36,7 @@ export const createLocationObj = (key: string, type: string, typeTitle: string, 
 }
 
 // firebase
-export function createFirebaseTrip(status, tripID, driverID) {
+export function createFirebaseTrip(status, availableSeats, tripID, driverID) {
 
     if (status === "available") {
         const db = getDatabase();
@@ -63,17 +63,31 @@ export function removeFirebaseTrip(tripID, uids) {
     remove(ref(db, `/trips/${tripID}`));
 }
 
+
 export function storeTripRequest(tripID, passengerData) {
     const db = getDatabase();
 
-    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
-    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "waiting", status: ""}}});
+    let status = false;
+
+    get(ref(db, `/trips/${tripID}`)).then((snapshot) => {
+        if (snapshot.val() !== null) {
+            status = snapshot.val().status === "waiting";
+            update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
+            update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "waiting", status: ""}}});
+        }
+        else {
+            status = false;
+        }
+    });
+
+    return status
 }
 
-export function acceptTripRequest(tripID, passengerData) {
+export function acceptTripRequest(tripID, availableSeats, passengerData) {
     const db = getDatabase();
 
     update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerData.passengerID}`]: {passengerId: passengerData.passengerID}});
+    update(ref(db, `/trips/${tripID}/`), {[`/status`]: "waiting"})
     remove(ref(db, `/tripRequests/${tripID}/${passengerData.passengerID}`));
     update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "accepted", status: "in_trip"}}})
 }
