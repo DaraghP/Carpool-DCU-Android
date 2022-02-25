@@ -45,6 +45,7 @@ export function createFirebaseTrip(status, availableSeats, tripID, driverID) {
             status: "waiting",
             driverID: driverID,
             passengers: {},
+            availableSeats: availableSeats
         })
         return true;
     }
@@ -56,31 +57,53 @@ export function removeFirebaseTrip(tripID, uids) {
 
     const db = getDatabase();
 
-    uids.map((uid) => {
-        update(ref(db, `/users/`), {[`/${uid}`]: {tripRequested: {tripID: null, requestStatus: "", status: "trip_complete"}}});
-    });
-    
-    remove(ref(db, `/trips/${tripID}`));
+    get(ref(db, `/tripRequests/${tripID}`)).then((snapshot) => {
+        let tripRequestUIDs = [];
+        if (snapshot.val() !== null) {
+            tripRequestUIDs = Object.keys(snapshot.val())
+            tripRequestUIDs.map((uid) => { //
+                update(ref(db, `/users/`), {[`/${uid}`]: {tripRequested: {tripID: tripID, requestStatus: "declined", status: ""}}});
+            });
+        }
+
+
+        if (uids !== null && uids !== undefined) {
+            uids.map((uid) => {
+                update(ref(db, `/users/`), {[`/${uid}`]: {tripRequested: {tripID: null, requestStatus: "", status: "trip_complete"}}});
+            });
+        }
+        remove(ref(db, `/tripRequests/${tripID}`));
+        remove(ref(db, `/trips/${tripID}`));
+
+    })
 }
 
 
-export function storeTripRequest(tripID, passengerData) {
+export async function storeTripRequest(tripID, passengerData) {
     const db = getDatabase();
 
-    let status = false;
+    let status: boolean;
 
-    get(ref(db, `/trips/${tripID}`)).then((snapshot) => {
-        if (snapshot.val() !== null) {
-            status = snapshot.val().status === "waiting";
-            update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
-            update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "waiting", status: ""}}});
-        }
-        else {
-            status = false;
-        }
-    });
 
-    return status
+    return await (
+        get(ref(db, `/trips/${tripID}`)).then((snapshot) => {
+
+            if (snapshot.val() !== null) {
+                status = snapshot.val().status === "waiting";
+                if (status) {
+                    update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
+                    update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "waiting", status: ""}}});
+                }
+                return status;
+            }
+            else {
+                status = false;
+            }
+
+            return status
+        })
+    )
+
 }
 
 export function acceptTripRequest(tripID, availableSeats, passengerData) {
@@ -88,6 +111,7 @@ export function acceptTripRequest(tripID, availableSeats, passengerData) {
 
     update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerData.passengerID}`]: {passengerId: passengerData.passengerID}});
     update(ref(db, `/trips/${tripID}/`), {[`/status`]: "waiting"})
+    update(ref(db, `/trips/${tripID}/`), {[`/availableSeats`]: availableSeats})
     remove(ref(db, `/tripRequests/${tripID}/${passengerData.passengerID}`));
     update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "accepted", status: "in_trip"}}})
 }

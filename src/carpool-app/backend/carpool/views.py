@@ -1,5 +1,8 @@
 import json
+from collections import namedtuple
+
 import requests
+from datetime import timedelta
 from django.core import serializers as django_serializers
 from django.forms.models import model_to_dict
 from django.contrib.auth import authenticate, login as django_login
@@ -206,14 +209,19 @@ def remove_trip(request):
 
     if request.method == "POST":
         if request.user.status != "available":
-            driver = Driver.objects.get(uid=request.user.id)
-            trip = Trip.objects.get(driver_id=driver.id)
-            request.user.current_trip = None
-            trip.delete()
+            trip = request.user.current_trip
 
-            request.user.status = "available"
-            request.user.save()
-            return Response(status=status.HTTP_200_OK)
+            people = CarpoolUser.objects.filter(current_trip=trip.id)
+
+            ids_list = []
+            for user in people:
+                ids_list.append(user.id)
+                user.status = "available"
+                user.current_trip = None
+                user.save()
+
+            trip.delete()
+            return Response({"uids": ids_list}, status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -264,10 +272,10 @@ def get_trips(request):
 
         for leg in response.json()["routes"][0]["legs"]:
             trip_data = {
-               "Start" : leg["start_address"], #
-               "Destination" : leg["end_address"],
-               "distance" : leg["distance"]["text"],
-               "duration" : leg["duration"]["text"],
+               "start": leg["start_address"], #
+               "destination": leg["end_address"],
+               "distance": leg["distance"]["text"],
+               "duration": leg["duration"]["text"],
             }
 
             # shows distance & duration between waypoints
@@ -302,13 +310,60 @@ def join_trip(request):
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
+def get_route_details(trip):
+    if len(trip.waypoints) < 1:
+        waypoints = ""
+    else:
+        print(trip.waypoints.values())
+        waypoints = "|".join([wp["name"] for wp in trip.waypoints.values()])
+
+    directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
+    directions_url = urllib.parse.quote(
+        f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints={waypoints}&key={settings.GOOGLE_API_KEY}",
+        safe='=?:/&'
+    )
+
+    response = requests.get(directions_url)
+
+    distance_calculation = 0
+    duration_calculation = 0
+
+    route = []
+    for leg in response.json()["routes"][0]["legs"]:
+        waypoint_info = {
+            "start": leg["start_address"],
+            "destination": leg["end_address"],
+            "distance": leg["distance"]["text"],
+            "duration": leg["duration"]["text"],
+        }
+
+        distance_calculation += float(leg["distance"]["text"].replace(",", "")[:-3])
+        duration_calculation += int(leg["duration"]["value"])
+
+        # shows distance & duration between waypoints
+        print(waypoint_info)
+        route.append(waypoint_info)
+
+    duration_calculation = str(timedelta(seconds=duration_calculation)).split(":")
+    total_duration = f"{duration_calculation[0]} hours, {duration_calculation[1].lstrip('0')} min, {duration_calculation[2]} sec"
+
+
+    # removes .0 from distance
+    if str(distance_calculation)[-1] == "0":
+        total_distance = str(distance_calculation)[:-2] + " km"
+    else:
+        total_distance = str(distance_calculation) + " km"
+
+    trip.distance = total_distance
+    trip.duration = total_duration
+
+    return {"route": route, "trip": trip}
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def add_passenger_to_trip(request):  # request.data = {tripID: A, passengerData : {id: B, name: C, passengerLocation: {name: D, lat: E, lng: F}}}
-    # Add passenger to trip.passengers
-    # Add passenger's starting_location to trip.waypoints
-    # Update passenger status to "passenger_busy"
-    if request.method == "POST":
+def add_passenger_to_trip(request):
+    if request.method == "POST": #
         print("Adding passenger to trip...")
         trip_id = request.data.get("tripID")
         if CarpoolUser.objects.filter(id=request.data["passengerData"]["id"]).exists():
@@ -333,11 +388,12 @@ def add_passenger_to_trip(request):  # request.data = {tripID: A, passengerData 
                 }
                 trip.available_seats -= 1
 
-                passenger_user.save()
-                trip.save()
+                route_details = get_route_details(trip)
+                trip_data = model_to_dict(route_details["trip"])
 
-                trip_data = model_to_dict(trip)
-                return Response({"trip_data": trip_data}, status=status.HTTP_200_OK)
+                passenger_user.save()
+                route_details["trip"].save()
+                return Response({"trip_data": {**trip_data, "route": route_details["route"]}}, status=status.HTTP_200_OK)
 
             return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"error": "Passenger does not exist"}, status=status.HTTP_404_NOT_FOUND)
@@ -376,15 +432,15 @@ def end_trip(request):
 def passenger_leave_trip(request): # 
     if request.method == "GET":
         passenger = request.user
-        if passenger.current_trip != None:
+        if passenger.current_trip is not None:
             trip = passenger.current_trip
             
             temp_passengers_dict = {**trip.passengers}
             print(temp_passengers_dict)
             for key, passenger in trip.passengers.items():
-            
-               temp_waypoints_dict = {**trip.waypoints}
-               if int(passenger["passengerID"]) == request.user.id: 
+
+                temp_waypoints_dict = {**trip.waypoints}
+                if int(passenger["passengerID"]) == request.user.id:
                    print("Remove passenger: ", request.user.id)
                    temp_passengers_dict.pop(key)
                    passenger_location = passenger["passengerLocation"]
@@ -394,12 +450,12 @@ def passenger_leave_trip(request): #
                            temp_waypoints_dict.pop(wkey)
                    trip.waypoints = temp_waypoints_dict
                    print("Remove waypoint: ", passenger_location)
-            
+
             trip.passengers = temp_passengers_dict
-            
-            # TODO: update distance and duration when waypoint is removed 
             trip.available_seats += 1
-            trip.save()
+
+            route_details = get_route_details(trip)
+            route_details["trip"].save()
 
             passenger.current_trip = None
             passenger.status = "available"
