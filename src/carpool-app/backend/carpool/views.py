@@ -2,7 +2,7 @@ import json
 from collections import namedtuple
 
 import requests
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.core import serializers as django_serializers
 from django.forms.models import model_to_dict
 from django.contrib.auth import authenticate, login as django_login
@@ -232,6 +232,11 @@ def get_trips(request):
     """
     Used by passengers to search for trips
     """
+    dcu_campuses = {
+        "gla": "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
+        "pat": "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"
+    }
+
 
     if request.method == 'POST':
         passenger = CarpoolUser.objects.get(id=request.user.id)
@@ -239,53 +244,47 @@ def get_trips(request):
         if passenger.status == "busy":
             return Response({"error": "You already have an ongoing trip."})
 
+        passenger_start_dcu = request.data["start"]["name"] in dcu_campuses.values()
+
         active_driver_users = CarpoolUser.objects.exclude(current_trip=None) 
 
         active_trip_id_list = [driver.current_trip.id for driver in active_driver_users if driver.current_trip.id != None]
-        active_trips = Trip.objects.filter(id__in=active_trip_id_list)
+        if passenger_start_dcu:
+            active_trips = Trip.objects.filter(id__in=active_trip_id_list).filter(start__name__in=dcu_campuses.values())
+        else:
+            active_trips = Trip.objects.filter(id__in=active_trip_id_list).filter(destination__name__in=dcu_campuses.values())
         
-        
-
         sorted_trips = active_trips.order_by("time_of_departure") 
-        trips_serialized = json.loads(django_serializers.serialize("json", sorted_trips))
+        final_list = []
+        for trip in sorted_trips:
+            if passenger_start_dcu:
+                if trip.start["name"] == request.data["start"]["name"]:
+                    updated_trip = get_route_details(trip, request.data["destination"]["name"])
+                else:
+                    updated_trip = get_route_details(trip, request.data["start"]["name"], request.data["destination"]["name"]) 
 
+            else:
+                if trip.destination["name"] == request.data["destination"]["name"]:
+                    updated_trip = get_route_details(trip, request.data["start"]["name"])
+                else:
+                    updated_trip = get_route_details(trip, request.data["start"]["name"], request.data["destination"]["name"])
+
+            print("new eta", updated_trip.ETA)
+            
+            final_list.append(updated_trip)
+        final_sorted_list = sorted(final_list, key=lambda t: t.ETA)
+        
+        trips_serialized = json.loads(django_serializers.serialize("json", final_sorted_list))
+        
         for index, trip in enumerate(trips_serialized):
             driver_name = Driver.objects.get(id=trips_serialized[index]["fields"]["driver_id"]).name
             trips_serialized[index] = {"pk": trip["pk"], "driver_name": driver_name, **trip["fields"]}
 
-        distance_matrix_base_url = "https://maps.googleapis.com/maps/api/distancematrix/json"
-        directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
-
-        # TODO: remove this later
-        if len(trips_serialized) < 1: 
-            return Response({}, status=status.HTTP_200_OK)
-
-        if len(trips_serialized[0]["waypoints"]) < 1:
-            waypoints = ""
-        else:
-            waypoints = "|".join([wp["name"] for wp in trips_serialized[0]['waypoints'].values()])
-
-        # distancematrix_url = urllib.parse.quote(f"{distance_matrix_base_url}?destinations={trips_serialized[2]['destination']['name']}|{request.data['start']['name']}&origins={trips_serialized[2]['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
-        directions_url = urllib.parse.quote(f"{directions_base_url}?destination={trips_serialized[0]['destination']['name']}&origin={trips_serialized[0]['start']['name']}&waypoints={waypoints}|{request.data['start']['name']}&key={settings.GOOGLE_API_KEY}", safe='=?:/&')
-
-        response = requests.get(directions_url)
-
-        for leg in response.json()["routes"][0]["legs"]:
-            trip_data = {
-               "start": leg["start_address"], #
-               "destination": leg["end_address"],
-               "distance": leg["distance"]["text"],
-               "duration": leg["duration"]["text"],
-            }
-
-            # shows distance & duration between waypoints
-            print(trip_data)
-
-        # TODO : make the algorithm to sort the trips
+        
+      
         return Response(trips_serialized, status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -293,7 +292,7 @@ def join_trip(request):
     """
     Used by passengers to get trip data when a passengers request to a driver is accepted
     """
-
+    
     if request.method == "POST":
         trip_id = request.data.get("tripID")
         if Trip.objects.filter(id=trip_id).exists():
@@ -310,7 +309,7 @@ def join_trip(request):
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-def get_route_details(trip):
+def get_route_details(trip, passenger_location="", passenger_secondary_location=""):
     if len(trip.waypoints) < 1:
         waypoints = ""
     else:
@@ -319,10 +318,9 @@ def get_route_details(trip):
 
     directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
     directions_url = urllib.parse.quote(
-        f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints={waypoints}&key={settings.GOOGLE_API_KEY}",
+        f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints={waypoints}|{passenger_location}|{passenger_secondary_location}&key={settings.GOOGLE_API_KEY}",
         safe='=?:/&'
     )
-
     response = requests.get(directions_url)
 
     distance_calculation = 0
@@ -337,16 +335,22 @@ def get_route_details(trip):
             "duration": leg["duration"]["text"],
         }
 
-        distance_calculation += float(leg["distance"]["text"].replace(",", "")[:-3])
+        if "km" in leg["distance"]["text"]:
+            distance_calculation += float(leg["distance"]["text"].replace(",", "")[:-3])
+        else:
+            distance_calculation += float(leg["distance"]["text"][:-2]) // 1000
+
         duration_calculation += int(leg["duration"]["value"])
 
         # shows distance & duration between waypoints
         print(waypoint_info)
         route.append(waypoint_info)
+    
+    trip_time = timedelta(seconds=duration_calculation) # 
+    eta = trip.time_of_departure + trip_time
 
     duration_calculation = str(timedelta(seconds=duration_calculation)).split(":")
     total_duration = f"{duration_calculation[0]} hours, {duration_calculation[1].lstrip('0')} min, {duration_calculation[2]} sec"
-
 
     # removes .0 from distance
     if str(distance_calculation)[-1] == "0":
@@ -356,9 +360,10 @@ def get_route_details(trip):
 
     trip.distance = total_distance
     trip.duration = total_duration
-
-    return {"route": route, "trip": trip}
-
+    trip.ETA = eta.replace(microsecond=0)
+    trip.route = {"route": route} 
+    # print(model_to_dict(trip))
+    return trip
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -388,12 +393,13 @@ def add_passenger_to_trip(request):
                 }
                 trip.available_seats -= 1
 
+
                 route_details = get_route_details(trip)
-                trip_data = model_to_dict(route_details["trip"])
+                trip_data = model_to_dict(route_details)
 
                 passenger_user.save()
-                route_details["trip"].save()
-                return Response({"trip_data": {**trip_data, "route": route_details["route"]}}, status=status.HTTP_200_OK)
+                route_details.save()
+                return Response({"trip_data": trip_data}, status=status.HTTP_200_OK)
 
             return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"error": "Passenger does not exist"}, status=status.HTTP_404_NOT_FOUND)
@@ -407,7 +413,7 @@ def end_trip(request):
         trip_id = request.data.get("tripID")
         if Trip.objects.filter(id=trip_id).exists():
             people = CarpoolUser.objects.filter(current_trip=trip_id)
-            
+
             ids_list = []
             trip = Trip.objects.get(id=trip_id)
             for user in people:
@@ -450,12 +456,14 @@ def passenger_leave_trip(request): #
                            temp_waypoints_dict.pop(wkey)
                    trip.waypoints = temp_waypoints_dict
                    print("Remove waypoint: ", passenger_location)
+            
+            passenger = request.user
 
             trip.passengers = temp_passengers_dict
             trip.available_seats += 1
 
             route_details = get_route_details(trip)
-            route_details["trip"].save()
+            route_details.save()
 
             passenger.current_trip = None
             passenger.status = "available"

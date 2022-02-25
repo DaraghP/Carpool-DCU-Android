@@ -58,10 +58,11 @@ function LoginScreen({ navigation }) {
             // navigates to home screen once globals.user.token updates
             dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token}));
 
-
-            Object.keys(res.trip_data["waypoints"]).map((key) => {
-                res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
-            });
+            if ("waypoints" in res.trip_data) {
+                Object.keys(res.trip_data["waypoints"]).map((key) => {
+                    res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
+                });
+            }
 
             dispatch(updateTripState({
                 ...res.trip_data,

@@ -31,15 +31,17 @@ class Trip(models.Model):
     id = models.AutoField(primary_key=True)
     driver_id = models.ForeignKey("Driver", on_delete=models.CASCADE)
     time_of_departure = models.DateTimeField(default=timezone.now)
+    ETA = models.DateTimeField(default=timezone.now)
     start = models.JSONField(default=dict)
     destination = models.JSONField(default=dict)
     waypoints = models.JSONField(default=dict)
     distance = models.CharField(default="0", max_length=150)
     duration = models.CharField(default="0", max_length=150)
+    route = models.JSONField(default=dict)
     passengers = models.JSONField(default=dict)
     available_seats = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
     # TODO: constraints
-
+    
 
 class Car(models.Model):
     id = models.AutoField(primary_key=True)

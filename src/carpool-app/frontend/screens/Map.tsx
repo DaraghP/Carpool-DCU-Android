@@ -12,7 +12,7 @@ import {
     setDuration,
     setAvailableSeats,
     setTimeOfDeparture,
-    updateTripState, resetTripState
+    updateTripState, resetTripState, setLocations
 } from "../reducers/trips-reducer";
 import {
     storeTripRequest,
@@ -33,6 +33,7 @@ import {
     Modal,
     Alert,
     HStack,
+    Divider,
     IconButton,
     CloseIcon
 } from "native-base";
@@ -81,6 +82,8 @@ function MapScreen() {
     const [dateToday, setDateToday] = useState(new Date());
     const [showTimeAlertModal, setShowTimeAlertModal] = useState(false);
     const [isTimeSelected, setIsTimeSelected] = useState(false);
+    const [isTripToDCU, setIsTripToDCU] = useState<boolean | undefined>(undefined);
+    const [campusSelected, setCampusSelected] = useState("");
 
     // firebase db
     const db = getDatabase();
@@ -143,7 +146,6 @@ function MapScreen() {
             dispatch(setTimeOfDeparture(new Date().toString()));
         }
 
-        // console.log(user.status)
         if (user.status === "available") {
             fetch(`${backendURL}/create_trip`, {
                 method: "POST",
@@ -265,8 +267,6 @@ function MapScreen() {
         }).then(response => response.json())
             .then((res) => {
                 if (!("error" in res)) {
-                    // console.log(res.trip_data);
-                    //
 
                     Object.keys(res.trip_data["waypoints"]).map((key) => {
                         res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
@@ -329,12 +329,12 @@ function MapScreen() {
                 Object.keys(res.trip_data["waypoints"]).map((key) => {
                     res.trip_data["waypoints"][key] = createLocationObj(key, "waypoint", `Waypoint ${key.charAt(key.length - 1)}`, {lat: res.trip_data["waypoints"][key].lat, lng: res.trip_data["waypoints"][key].lng}, res.trip_data["waypoints"][key].name, true);
                 });
-
+                
                 dispatch(updateTripState({
                     ...res.trip_data,
                     locations: {
                         ...trips.locations,
-                        ...res.trip_data["waypoints"],//
+                        ...res.trip_data["waypoints"],
                     },
                     availableSeats: res.trip_data["available_seats"],
                     numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
@@ -371,7 +371,9 @@ function MapScreen() {
             console.log(res); //
             if (res.status === 200) {
                 dispatch(resetTripState());
-                console.log(res.data) // going to request , then cancel yea
+                setIsTripToDCU(undefined);
+                setCampusSelected("");
+                console.log(res.data)
                 removeFirebaseTrip(trips.id, res.data.uids);
                 // console.log("trip deleted")
             }
@@ -493,6 +495,8 @@ function MapScreen() {
                         if (snapshot.val().status === "trip_complete" && !resetedAfterTripComplete) {
                             dispatch(updateUserState({status: "available", tripRequestStatus: undefined}))
                             dispatch(resetTripState());//
+                            setIsTripToDCU(undefined);
+                            setCampusSelected("");
                             setShowTripAvailableModal(false);
                             setResetedAfterTripComplete(true);
                         }
@@ -532,6 +536,11 @@ function MapScreen() {
     // }, [filteredTrips])
 
     useEffect(() => {
+        dispatch(resetTripState()); 
+        setCampusSelected(""); 
+    }, [isTripToDCU])
+
+    useEffect(() => {
       const setTimeInterval = setInterval(() => {
           let date = new Date();
           date.setMinutes(date.getMinutes() + 5);
@@ -547,20 +556,93 @@ function MapScreen() {
       <View key={v4()} style={styles.container}>
           <View style={{flex: 1, elevation: -1, zIndex: -1}}>
                   {user.status === "available" &&
-                      <>
-                          <CreateGoogleAutocompleteInput
-                              key={v4()}
-                              locationObjName={"startingLocation"}
-                              placeholder="Enter your starting point..."
-                              style={{rounded: 5}}
-                          />
+                        <>
+                        {/* should inputs only be visible if isTripToDCU isn't undefined, think it would look nicer, same for add waypoint, time, select
+                            i think it would be better since the user can look through them step by step
+                        */}
+                        {/**/}
+                         {isTripToDCU === undefined ? 
+                            <Button.Group isAttached space={15} mx={{base: "auto"}} justifyContent="center">
+                                <Button 
+                                        width="30%"
+                                        colorScheme="gray"
+                                        {...(isTripToDCU ? {colorScheme: "red"} : {variant: "outline"})} 
+                                        onPress = {() => {
+                                            setIsTripToDCU(true); 
+                                        }}
+                                    >
+                                        To DCU
+                                    </Button>
+                                <Button 
+                                    width="30%" 
+                                    colorScheme="gray" 
+                                    {...(!isTripToDCU && isTripToDCU !== undefined ? {colorScheme: "red"} : {variant: "outline"})} 
+                                    onPress={() => {setIsTripToDCU(false);}}>
+                                        From DCU
+                                </Button>
+                            </Button.Group>
+                            :
+                            <HStack>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setIsTripToDCU(undefined);
+                                        setCampusSelected("");
+                                        dispatch(resetTripState())
+                                    }}
+                                >
+                                    <Icon ml="2" as={Ionicons} name="arrow-back-outline"></Icon>
+                                {/*       */}
+                                </TouchableOpacity>
+                                    
+                                {/* <Text>Select a campus:</Text> */}
+                                
+                                <Button.Group isAttached space={15} mx={{base: "auto"}} justifyContent="center">
+                                    <Button width="40%" {...(campusSelected == "GLA" ? {colorScheme: "red"} : {variant: "outline"})} 
+                                        onPress={() => {
+                                            setCampusSelected("GLA");
+                                            if (isTripToDCU) {
+                                                dispatch(setLocations({destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: 53.3863494, lng: -6.256591399999999}, "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9", true)}))
+                                            } else {
+                                                dispatch(setLocations({startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: 53.3863494, lng: -6.256591399999999}, "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9", true)}))
+                                            }
+                                        }}
+                                    >
+                                            Glasnevin
+                                    </Button>
+                                    <Button width="40%" {...(campusSelected == "PAT" ? {colorScheme: "red"} : {variant: "outline"})} 
+                                        onPress={() => {
+                                            setCampusSelected("PAT");
+                                            if (isTripToDCU) {
+                                                dispatch(setLocations({destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: 53.3701804, lng: -6.254689499999999}, "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland", true)}))
+                                            }
+                                            else {
+                                                dispatch(setLocations({startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: 53.3701804, lng: -6.254689499999999}, "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland", true)}))                                                            
+                                            }
+                                        }}
+                                    >
+                                            St. Patrick's
+                                    </Button>
+                                </Button.Group>
+                            </HStack>
+                        }
+                        <Divider mt="5"/>
 
-                          <CreateGoogleAutocompleteInput
-                              key={v4()}
-                              locationObjName={"destLocation"}
-                              placeholder="Enter your destination..."
-                          />
+                          {isTripToDCU ? 
+                            <CreateGoogleAutocompleteInput
+                                key={v4()}
+                                locationObjName={"startingLocation"}
+                                placeholder="Enter your starting point..."
+                                style={{rounded: 5}}
+                            />
+                            :
+                            <CreateGoogleAutocompleteInput
+                                key={v4()}
+                                locationObjName={"destLocation"}
+                                placeholder="Enter your destination..."
+                            />
+                          }
 
+                          
                           {Object.keys(trips.locations).sort().map((key) => {
                               if (trips.locations[key].type === "waypoint") {
                                   if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {
@@ -801,9 +883,9 @@ function MapScreen() {
               <Text>Distance: {distance}</Text>
               <Text>Duration: {duration}</Text>  */}
 
-          {trips.role === "passenger" && user.status === "available" &&
+          {trips.role === "passenger" && user.status === "available" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
               <>
-                  {user.tripRequestStatus === undefined && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+                  {(user.tripRequestStatus === undefined || user.tripRequestStatus === "") &&
                       <Button onPress={() => {
                           openPanel();
                           searchTrips();
@@ -827,7 +909,6 @@ function MapScreen() {
                         }
                     />
                   }
-
                   <SwipeablePanel
                       key={v4()}
                       scrollViewProps={{style: {padding: 10}}}
@@ -860,6 +941,9 @@ function MapScreen() {
                                               <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
                                               <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
                                               <Text>{tripsFound[tripKey].time_of_departure}</Text>
+                                              <Text>From: {tripsFound[tripKey].start.name}</Text>
+                                              <Text>To: {tripsFound[tripKey].destination.name}</Text>
+                                              <Text>ETA: {tripsFound[tripKey].ETA}</Text>
                                           </VStack>
                                           <Button style={{flexDirection: "row", marginLeft: "auto"}}
                                               onPress={() => {
@@ -879,12 +963,11 @@ function MapScreen() {
                                                           dispatch(updateTripRequestStatus("waiting"));
                                                           dispatch(updateStatus("passenger_busy"));
                                                       }
-                                                      //
 
                                                       if (!isStored) {
                                                         setTripsFound({});
                                                       }
-                                                      //
+                                                      
                                                       setShowTripAvailableModal(!isStored)
                                                   })
 
@@ -959,7 +1042,6 @@ function MapScreen() {
                                                 </Flex>
 
                                             </TouchableOpacity>
-                                            // <Button key={v4()} onPress={() => acceptRequest(key)}>{firebaseTripsVal.data.tripRequests[key].name}</Button>
                                         )
                                      })
                                  }
@@ -977,8 +1059,8 @@ function MapScreen() {
                 <Button>Request Sent to user.tripRequest.driverName</Button>
                 <Text>Awaiting Response from Driver </Text>
                 <Button variant="subtle"
-                    onPress={() => {//
-                        console.log(user.id) //
+                    onPress={() => {
+                        console.log(user.id)
                         remove(ref(db, `/tripRequests/${trips.id}/${user.id}`));
                         update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}})
                         dispatch(updateUserState({tripRequestStatus: "cancelled", status: "available"}));
@@ -1018,11 +1100,13 @@ function MapScreen() {
                                 'Authorization': `Token ${user.token}`
                             },
                         }).then(response => response.json())
-                        .then(res => { //
+                        .then(res => {
                             if (!("errorType" in res)) {
                                 remove(ref(db, `/users/${user.id}`));
                                 remove(ref(db, `/trips/${trips.id}/passengers/${user.id}`));
                                 dispatch(resetTripState())
+                                setIsTripToDCU(undefined);
+                                setCampusSelected("");
                                 dispatch(updateUserState({status: "available", tripStatus: "", tripRequestStatus: ""}));
                             }
                             else {
@@ -1050,8 +1134,8 @@ function MapScreen() {
                 <Text>Message drivername @ phonenumber</Text>
               </>
           }
-          {/*  */}
-          {user.tripStatus == "trip_complete" && //
+          
+          {user.tripStatus == "trip_complete" &&
               <TripAlertModal
                   headerText="Trip Alert"
                   bodyText="Your previous trip has ended"
@@ -1092,12 +1176,3 @@ const styles = StyleSheet.create({
 });
 
 export default MapScreen;
-//
-// Today: allow time of departure to be future date, update distances/duration, move onto constraints
-// Friday: refactoring
-// Saturday: UI
-// Sunday: UI
-// Monday: Final touches / unit testing / commenting code
-// Tuesday: video walk-through / user testing / Documentation
-// need to just check start trip/cancel trip/ and trip complete work then we'll do update distances/duration
-//

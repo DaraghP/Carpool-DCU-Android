@@ -21,7 +21,7 @@ export default function Index() {
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
 
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://9434-46-7-17-96.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://b62e-2001-bb6-6792-1a00-805f-deef-77ba-b8fa.ngrok.io"}));
   }, [])
 
   useEffect(() => {

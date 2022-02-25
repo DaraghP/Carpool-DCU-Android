@@ -115,6 +115,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
                         onPress={() => {
                             markerRef.current?.setAddressText("");
                         }}
+                        style={{justifyContent:"center"}}
                     >
                         <Center>
                             <Ionicons style={{marginRight: 5}} color={markerRef.current?.getAddressText() !== "" ? "black" : "#c8c7cc"} name="close-circle-outline" size={25} />
@@ -126,6 +127,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
                             onPress={() => {
                                 deleteWaypoint(locationObj)
                             }}
+                            style={{justifyContent:"center"}}
                         >
                             <Center>
                                 <Ionicons style={{marginRight: 5}} color="red" name="remove-circle" size={25} />
