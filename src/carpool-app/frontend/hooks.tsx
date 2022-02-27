@@ -61,11 +61,10 @@ export async function removeFirebaseTrip(tripID, uids) {
         let tripRequestUIDs = [];
         if (snapshot.val() !== null) {
             tripRequestUIDs = Object.keys(snapshot.val())
-            tripRequestUIDs.map((uid) => { //
+            tripRequestUIDs.map((uid) => {
                 update(ref(db, `/users/`), {[`/${uid}`]: {tripRequested: {tripID: tripID, requestStatus: "declined", status: ""}}});
-            });
+            });      
         }
-
 
         if (uids !== null && uids !== undefined) {
             uids.map((uid) => {
@@ -73,8 +72,7 @@ export async function removeFirebaseTrip(tripID, uids) {
             });
         }
         remove(ref(db, `/tripRequests/${tripID}`));
-        remove(ref(db, `/trips/${tripID}`));
-
+        remove(ref(db, `/trips/${tripID}`)); 
     })
 }
 

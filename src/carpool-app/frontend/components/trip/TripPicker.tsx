@@ -159,10 +159,13 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                                                       startLocation: {
                                                           name: trips.locations.startingLocation.marker.description,
                                                           coords: trips.locations.startingLocation.info.coords
+                                                      },
+                                                      destination: {
+                                                          name: trips.locations.destLocation.marker.description,
+                                                          coords: trips.locations.destLocation.info.coords
                                                       }
                                                   }
-
-                                                  //
+                                                  
                                                   storeTripRequest(tripsFound[tripKey].pk, passengerData).then((isStored) => {
                                                       if (!filteredTrips.has(`${tripsFound[tripKey].pk}`) && isStored) {
                                                           setPreviousTripID(trips.id);

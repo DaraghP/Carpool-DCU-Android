@@ -362,7 +362,11 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_passenger_to_trip(request):
-    if request.method == "POST": #
+    dcu_campuses = {
+        "gla": "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
+        "pat": "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"
+    }
+    if request.method == "POST":
         print("Adding passenger to trip...")
         trip_id = request.data.get("tripID")
         if CarpoolUser.objects.filter(id=request.data["passengerData"]["id"]).exists():
@@ -378,16 +382,39 @@ def add_passenger_to_trip(request):
                 trip.passengers[f"passenger{passenger_user.id}"] = {
                     "passengerName": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
                     "passengerID": request.data["passengerData"]["id"],
-                    "passengerLocation": request.data["passengerData"]["passengerLocation"]["name"],
-                }
-                trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
-                    "name": request.data["passengerData"]["passengerLocation"]["name"],
-                    "lat": request.data["passengerData"]["passengerLocation"]["lat"],
-                    "lng": request.data["passengerData"]["passengerLocation"]["lng"],
-                }
+                    "passengerStart": request.data["passengerData"]["passengerStart"]["name"], 
+                    "passengerDestination": request.data["passengerData"]["passengerDestination"]["name"], 
+                } #
+                
+                if trip.start["name"] == request.data["passengerData"]["passengerStart"]["name"]:
+                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
+                        "name": request.data["passengerData"]["passengerDestination"]["name"],
+                        "lat": request.data["passengerData"]["passengerDestination"]["lat"],
+                        "lng": request.data["passengerData"]["passengerDestination"]["lng"],
+                    }
+                elif trip.destination["name"] == request.data["passengerData"]["passengerDestination"]["name"]:
+                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
+                        "name": request.data["passengerData"]["passengerStart"]["name"],
+                        "lat": request.data["passengerData"]["passengerStart"]["lat"],
+                        "lng": request.data["passengerData"]["passengerStart"]["lng"],
+                    }
+                else:
+                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
+                        "name": request.data["passengerData"]["passengerDestination"]["name"],
+                        "lat": request.data["passengerData"]["passengerDestination"]["lat"],
+                        "lng": request.data["passengerData"]["passengerDestination"]["lng"],
+                    }
+                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
+                        "name": request.data["passengerData"]["passengerStart"]["name"],
+                        "lat": request.data["passengerData"]["passengerStart"]["lat"],
+                        "lng": request.data["passengerData"]["passengerStart"]["lng"],
+                    }  
+
+# what changed in hooks?
+ 
                 trip.available_seats -= 1
 
-
+                
                 route_details = get_route_details(trip)
                 trip_data = model_to_dict(route_details)
 

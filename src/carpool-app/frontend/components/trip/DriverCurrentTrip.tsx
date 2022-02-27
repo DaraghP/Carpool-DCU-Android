@@ -1,7 +1,7 @@
 import {View} from "react-native";
 import {Button, Heading, Text} from "native-base";
 import {v4} from "uuid";
-import {getDatabase, ref, remove, update} from "firebase/database";
+import {getDatabase, get, ref, remove, update} from "firebase/database";
 import {removeFirebaseTrip, useAppDispatch, useAppSelector} from "../../hooks";
 import {resetTripState} from "../../reducers/trips-reducer";
 import {updateStatus} from "../../reducers/user-reducer";
@@ -30,11 +30,11 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
         }).then(response => response.json().then(data => ({status: response.status, data: data})))
         .then(res => {
             // console.log(res);
-            if (res.status === 200) {
+            if (res.status === 200) { 
                 dispatch(resetTripState());
-                setIsTripToDCU(undefined);
-                setCampusSelected("");
-                // console.log(res.data)
+                setIsTripToDCU(undefined); // 
+                setCampusSelected(""); 
+                
                 removeFirebaseTrip(trips.id, res.data.uids);
                 // console.log("trip deleted")
             }
@@ -73,9 +73,9 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                   <Text>Departure Time:</Text>
                   <Text style={{fontWeight: "bold"}}>{new Date(trips.timeOfDeparture).toLocaleTimeString().slice(0, 5)} {new Date(trips.timeOfDeparture).toLocaleDateString()}</Text>
 
-                  <Text>ETA: </Text>{/* timeofDeparture + duration*/}
+                  <Text>ETA: {trips.ETA}</Text>{/* timeofDeparture + duration*/}
                   <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
-                      return(<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>)
+                      return (<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>)
                     })
                   }
                   </Text>
@@ -94,12 +94,23 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                      :
                      <>
                          <Button onPress={() => {
-                             update(ref(db, `/trips/${trips.id}`), {[`/status`]: "departed"})
-                             remove(ref(db, `/tripRequests/${trips.id}`))
+                            
+
+                             update(ref(db, `/trips/${trips.id}`), {[`/status`]: "departed"}) 
+                             get(ref(db, `/tripRequests/${trips.id}`)).then((snapshot) => { 
+                                if (snapshot.val() !== null) {
+                                    let passengerKeys = Object.keys(snapshot.val());
+                                    passengerKeys.map((key) => {
+                                        update(ref(db, `/users/`), {[`/${key}`]: {tripRequested: {tripID: trips.id, requestStatus: "declined", status: ""}}});
+                                    }) // 
+                                }
+                                remove(ref(db, `/tripRequests/${trips.id}`)); 
+                            })
+                            
                          }}>
                              START Trip
                          </Button>
-                         <Button onPress={() => {cancelTrip()}}>Cancel Trip</Button>
+                         <Button colorScheme="red" onPress={() => {cancelTrip()}}>Cancel Trip</Button>
                      </>
 
                  }

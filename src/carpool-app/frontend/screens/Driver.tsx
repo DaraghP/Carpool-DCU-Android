@@ -1,5 +1,5 @@
 import {Button, Center, VStack, Heading, Spinner} from "native-base";
-import MapScreen from "./TripScreen"
+import TripScreen from "./TripScreen"
 import {SafeAreaView} from "react-native";
 import {useRef, useEffect, useState} from "react";
 import {useAppSelector, useAppDispatch} from "../hooks";
@@ -133,7 +133,7 @@ function DriverScreen({navigation}) {
             }
 
             {getDriverRequestFinished && hasCreatedDriverRole &&
-                <MapScreen/>
+                <TripScreen/>
             }
 
         </SafeAreaView>

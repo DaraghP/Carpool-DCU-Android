@@ -68,7 +68,7 @@ import NumberOfSeatsSelector from "../components/trip/NumberOfSeatsSelector";
 import TripScreenAlertModals from "../components/trip/TripScreenAlertModals";
 
 
-function MapScreen() {
+function TripScreen() {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips, shallowEqual);
     const user = useAppSelector(state => state.user);
@@ -476,4 +476,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MapScreen;
+export default TripScreen;

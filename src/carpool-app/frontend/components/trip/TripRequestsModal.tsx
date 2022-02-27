@@ -14,25 +14,6 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
     const backendURL = useAppSelector(state => state.globals.backendURL);
 
     const [showPassengerRequestsModal, setShowPassengerRequestsModal] = useState(false);
-    // const [firebaseTripRequests, setFirebaseTripRequests] = useState({});
-
-
-    // useEffect(() => {
-    //     onValue(ref(db, `/tripRequests/${trips.id}`), (snapshot) => {
-    //         if (snapshot.val() !== null) {
-    //             console.log("trip requested")
-    //             setFirebaseTripRequests(snapshot.val());
-    //         }
-    //         else {
-    //             setFirebaseTripRequests({});
-    //         }
-    //     })
-    //
-    //     return () => {
-    //         off(ref(db, `/tripRequests/${trips.id}`));
-    //         off(ref(db, `/tripRequests/${previousTripID}`));
-    //     }
-    // }, [])
 
     const acceptRequest = (passengerID) => {
         fetch(`${backendURL}/add_passenger_to_trip`, {
@@ -47,10 +28,15 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
                 passengerData: {
                     id: passengerID,
                     name: firebaseTripRequests[passengerID].name,
-                    passengerLocation: {
+                    passengerStart: {
                         name: firebaseTripRequests[passengerID].startLocation.name,
                         lat: firebaseTripRequests[passengerID].startLocation.coords.lat,
-                        lng: firebaseTripRequests[passengerID].startLocation.coords.lng, //
+                        lng: firebaseTripRequests[passengerID].startLocation.coords.lng, 
+                    },
+                    passengerDestination: {
+                        name: firebaseTripRequests[passengerID].destination.name,
+                        lat: firebaseTripRequests[passengerID].destination.coords.lat,
+                        lng: firebaseTripRequests[passengerID].destination.coords.lng, 
                     }
                 }
             })
