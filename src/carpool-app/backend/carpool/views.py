@@ -237,7 +237,6 @@ def get_trips(request):
         "pat": "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"
     }
 
-
     if request.method == 'POST':
         passenger = CarpoolUser.objects.get(id=request.user.id)
 
@@ -290,21 +289,15 @@ def get_trips(request):
 @permission_classes([IsAuthenticated])
 def join_trip(request):
     """
-    Used by passengers to get trip data when a passengers request to a driver is accepted
+    Used by passengers to get trip data when a passengers request to a driver is accepted.
+    Also used by drivers to get trip data when a passenger leaves the trip.
     """
-    
     if request.method == "POST":
         trip_id = request.data.get("tripID")
         if Trip.objects.filter(id=trip_id).exists():
             trip = Trip.objects.get(id=trip_id)
-            if request.user.current_trip is not trip:
-                request.user.current_trip = trip
-
-            request.user.save()
-            trip.save()
-
-            return Response({"trip_data": model_to_dict(trip)})
-
+            return Response({"trip_data": model_to_dict(trip)}, status=status.HTTP_200_OK)
+        
         return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -364,6 +357,7 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
     trip.route = {"route": route} 
     # print(model_to_dict(trip))
     return trip
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -435,7 +429,7 @@ def end_trip(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def passenger_leave_trip(request): # 
+def passenger_leave_trip(request):
     if request.method == "GET":
         passenger = request.user
         if passenger.current_trip is not None:
@@ -468,7 +462,7 @@ def passenger_leave_trip(request): #
             passenger.current_trip = None
             passenger.status = "available"
             passenger.save()
-            return Response({"success": "Passenger removed from trip."}, status=status.HTTP_200_OK)
+            return Response({"status": "Passenger removed from trip.", "available_seats": trip.available_seats}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Passenger does not have an active trip."}, status=status.HTTP_204_NO_CONTENT)
 

@@ -15,15 +15,6 @@ const firebaseConfig = {
   storageBucket: "ca326-carpool-app-firebase.appspot.com",
   messagingSenderId: "487214279440",
   appId: "1:487214279440:web:540d41374b73b0b10c9395"
-
-
-  // authDomain: "ca326-carpoolapp-firebase.firebaseapp.com",
-  // databaseURL: "https://ca326-carpoolapp-firebase-default-rtdb.europe-west1.firebasedatabase.app",
-  // projectId: "ca326-carpoolapp-firebase",
-  // storageBucket: "ca326-carpoolapp-firebase.appspot.com",
-  // messagingSenderId: "875447657267",
-  // appId: "1:875447657267:web:9e96fb4231c3fc6a965446",
-  // measurementId: "G-30T752Y3S2"
 };
 
 

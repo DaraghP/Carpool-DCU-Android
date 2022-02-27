@@ -1,10 +1,10 @@
-import {setLocations, setNumberOfWaypoints} from "../reducers/trips-reducer";
+import {setLocations, setNumberOfWaypoints} from "../../reducers/trips-reducer";
 import {GooglePlacesAutocomplete, GooglePlacesAutocompleteRef} from "react-native-google-places-autocomplete";
 import {useEffect, useRef, useState} from "react";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {Alert, TouchableOpacity, TouchableWithoutFeedback} from "react-native";
 import {Button, Center, Text} from "native-base";
-import { useAppDispatch, useAppSelector, createLocationObj } from "../hooks";
+import { useAppDispatch, useAppSelector, createLocationObj } from "../../hooks";
 import {GOOGLE_API_KEY} from "@env";
 
 
@@ -14,8 +14,6 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
     const markerRef = useRef<GooglePlacesAutocomplete>();
     const locationObj = trips.locations[locationObjName];
 
-
-    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
         markerRef.current?.setAddressText(locationObj.marker.description);

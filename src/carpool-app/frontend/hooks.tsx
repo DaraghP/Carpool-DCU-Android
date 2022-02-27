@@ -53,7 +53,7 @@ export function createFirebaseTrip(status, availableSeats, tripID, driverID) {
     return false;
 }
 
-export function removeFirebaseTrip(tripID, uids) {
+export async function removeFirebaseTrip(tripID, uids) {
 
     const db = getDatabase();
 
@@ -84,8 +84,7 @@ export async function storeTripRequest(tripID, passengerData) {
 
     let status: boolean;
 
-
-    return await (
+    return (
         get(ref(db, `/trips/${tripID}`)).then((snapshot) => {
 
             if (snapshot.val() !== null) {
@@ -101,12 +100,12 @@ export async function storeTripRequest(tripID, passengerData) {
             }
 
             return status
-        })
+         })
     )
 
 }
 
-export function acceptTripRequest(tripID, availableSeats, passengerData) {
+export async function acceptTripRequest(tripID, availableSeats, passengerData) {
     const db = getDatabase();
 
     update(ref(db, `/trips/${tripID}/passengers/`), {[`/${passengerData.passengerID}`]: {passengerId: passengerData.passengerID}});

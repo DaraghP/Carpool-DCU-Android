@@ -1,5 +1,5 @@
 import {Button, Center, VStack, Heading, Spinner} from "native-base";
-import MapScreen from "./Map"
+import MapScreen from "./TripScreen"
 import {SafeAreaView} from "react-native";
 import {useRef, useEffect, useState} from "react";
 import {useAppSelector, useAppDispatch} from "../hooks";

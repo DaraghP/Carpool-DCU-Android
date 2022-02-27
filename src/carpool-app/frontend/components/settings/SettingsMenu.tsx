@@ -1,8 +1,8 @@
 import {StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import {Button, Divider, Heading, ScrollView} from "native-base";
-import {updateUserState} from "../reducers/user-reducer";
-import {useAppDispatch, useAppSelector} from "../hooks";
-import {resetTripState} from "../reducers/trips-reducer";
+import {updateUserState} from "../../reducers/user-reducer";
+import {useAppDispatch, useAppSelector} from "../../hooks";
+import {resetTripState} from "../../reducers/trips-reducer";
 
 function SettingsMenu({ navigation }) {
     const dispatch = useAppDispatch();
