@@ -1,16 +1,17 @@
-import {Button, Divider, HStack, Icon} from "native-base";
-import {TouchableOpacity} from "react-native";
+import {Button, Divider, HStack, Icon, Text, View} from "native-base";
+import {StyleSheet, TouchableOpacity} from "react-native";
 import {resetTripState, setLocations} from "../../reducers/trips-reducer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {createLocationObj, useAppDispatch} from "../../hooks";
+import {useEffect} from "react";
 
 function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU, setIsTripToDCU}) {
     const dispatch = useAppDispatch();
 
     return (
-        <>
+        <View style={{borderBottomColor: "blue"}}>
            {isTripToDCU === undefined ?
-                <Button.Group isAttached space={15} mx={{base: "auto"}} justifyContent="center">
+                <Button.Group isAttached={false} alignSelf="center" alignItems="center" justifyContent="center">
                     <Button
                             width="30%"
                             colorScheme="gray"
@@ -25,7 +26,10 @@ function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU
                         width="30%"
                         colorScheme="gray"
                         {...(!isTripToDCU && isTripToDCU !== undefined ? {colorScheme: "red"} : {variant: "outline"})}
-                        onPress={() => {setIsTripToDCU(false);}}>
+                        onPress={() => {
+                            setIsTripToDCU(false);
+                        }}
+                    >
                             From DCU
                     </Button>
                 </Button.Group>
@@ -37,14 +41,20 @@ function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU
                             setCampusSelected("");
                             dispatch(resetTripState())
                         }}
+                        style={{alignSelf: "center", padding: 0}}
                     >
                         <Icon ml="2" as={Ionicons} name="arrow-back-outline"/>
                     </TouchableOpacity>
 
                     {/* <Text>Select a campus:</Text> */}
 
-                    <Button.Group isAttached space={15} mx={{base: "auto"}} justifyContent="center">
-                        <Button width="40%" {...(campusSelected == "GLA" ? {colorScheme: "red"} : {variant: "outline"})}
+                    <Button.Group isAttached={false} alignSelf="center" alignItems="center" justifyContent="center">
+                        <Button
+                            colorScheme={"gray"}
+                            borderWidth={1}
+                            rounded={30}
+                            width="40%"
+                            {...(campusSelected == "GLA" ? {colorScheme: "red"} : {variant: "outline"})}
                             onPress={() => {
                                 setCampusSelected("GLA");
                                 if (isTripToDCU) {
@@ -54,9 +64,18 @@ function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU
                                 }
                             }}
                         >
+                            <Text fontWeight="bold" {...(campusSelected === "GLA" ? {color: "white"} : {color: "black"})}>
+                                {isTripToDCU ? "To " : "From "}{"\n"}
                                 Glasnevin
+                            </Text>
                         </Button>
-                        <Button width="40%" {...(campusSelected == "PAT" ? {colorScheme: "red"} : {variant: "outline"})}
+
+                        <Button
+                            colorScheme={"gray"}
+                            borderWidth={1}
+                            rounded={30}
+                            width="40%"
+                            {...(campusSelected == "PAT" ? {colorScheme: "red"} : {variant: "outline"})}
                             onPress={() => {
                                 setCampusSelected("PAT");
                                 if (isTripToDCU) {
@@ -67,14 +86,20 @@ function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU
                                 }
                             }}
                         >
+                            <Text fontWeight="bold" {...(campusSelected === "PAT" ? {color: "white"} : {color: "black"})}>
+                                {isTripToDCU ? "To " : "From "}{"\n"}
                                 St. Patrick's
+                            </Text>
                         </Button>
                     </Button.Group>
                 </HStack>
             }
             <Divider mt="5"/>
-        </>
+        </View>
     )
 }
+
+const styles = StyleSheet.create({
+})
 
 export default CampusDirectionSelector;

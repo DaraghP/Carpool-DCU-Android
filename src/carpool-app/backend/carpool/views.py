@@ -245,59 +245,63 @@ def get_trips(request):
 
         passenger_start_dcu = request.data["start"]["name"] in dcu_campuses.values()
 
-        active_driver_users = CarpoolUser.objects.exclude(current_trip=None) 
+        active_driver_users = CarpoolUser.objects.exclude(current_trip=None)
 
-        active_trip_id_list = [driver.current_trip.id for driver in active_driver_users if driver.current_trip.id != None]
+        active_trip_id_list = [driver.current_trip.id for driver in active_driver_users if
+                               driver.current_trip.id != None]
         if passenger_start_dcu:
             active_trips = Trip.objects.filter(id__in=active_trip_id_list).filter(start__name__in=dcu_campuses.values())
         else:
-            active_trips = Trip.objects.filter(id__in=active_trip_id_list).filter(destination__name__in=dcu_campuses.values())
-        
-        sorted_trips = active_trips.order_by("time_of_departure") 
+            active_trips = Trip.objects.filter(id__in=active_trip_id_list).filter(
+                destination__name__in=dcu_campuses.values())
+
+        sorted_trips = active_trips.order_by("time_of_departure")
         final_list = []
         for trip in sorted_trips:
-            if passenger_start_dcu:
-                if trip.start["name"] == request.data["start"]["name"]:
-                    updated_trip = get_route_details(trip, request.data["destination"]["name"])
-                else:
-                    updated_trip = get_route_details(trip, request.data["start"]["name"], request.data["destination"]["name"]) 
+            if passenger_start_dcu and (trip.start["name"] in dcu_campuses.values()):
+                updated_trip = get_route_details(trip, request.data["destination"]["name"])
 
-            else:
-                if trip.destination["name"] == request.data["destination"]["name"]:
-                    updated_trip = get_route_details(trip, request.data["start"]["name"])
-                else:
-                    updated_trip = get_route_details(trip, request.data["start"]["name"], request.data["destination"]["name"])
+            elif (request.data["destination"]["name"] in dcu_campuses.values()) \
+                    and (trip.destination["name"] in dcu_campuses.values()):
+                updated_trip = get_route_details(trip, request.data["start"]["name"])
 
             print("new eta", updated_trip.ETA)
-            
+
             final_list.append(updated_trip)
+
         final_sorted_list = sorted(final_list, key=lambda t: t.ETA)
-        
+
         trips_serialized = json.loads(django_serializers.serialize("json", final_sorted_list))
-        
+
         for index, trip in enumerate(trips_serialized):
             driver_name = Driver.objects.get(id=trips_serialized[index]["fields"]["driver_id"]).name
-            trips_serialized[index] = {"pk": trip["pk"], "driver_name": driver_name, **trip["fields"]}
 
-        
-      
+            if not request.data["isPassengerToDCU"]:
+                is_campus_same = request.data["start"]["name"] == trip["fields"]["start"]["name"]
+            else:
+                is_campus_same = request.data["destination"]["name"] == trip["fields"]["destination"]["name"]
+
+            trips_serialized[index] = {
+                "pk": trip["pk"], "driver_name": driver_name, "isCampusSame": is_campus_same, **trip["fields"]
+            }
+
         return Response(trips_serialized, status=status.HTTP_200_OK)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(["POST"])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def join_trip(request):
     """
     Used by passengers to get trip data when a passengers request to a driver is accepted.
     Also used by drivers to get trip data when a passenger leaves the trip.
     """
-    if request.method == "POST":
-        trip_id = request.data.get("tripID")
-        if Trip.objects.filter(id=trip_id).exists():
-            trip = Trip.objects.get(id=trip_id)
+    if request.method == "GET":
+        if Trip.objects.filter(id=request.user.current_trip.id).exists():
+            trip = Trip.objects.get(id=request.user.current_trip.id)
             return Response({"trip_data": model_to_dict(trip)}, status=status.HTTP_200_OK)
-        
+
         return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -338,8 +342,8 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         # shows distance & duration between waypoints
         print(waypoint_info)
         route.append(waypoint_info)
-    
-    trip_time = timedelta(seconds=duration_calculation) # 
+
+    trip_time = timedelta(seconds=duration_calculation)
     eta = trip.time_of_departure + trip_time
 
     duration_calculation = str(timedelta(seconds=duration_calculation)).split(":")
@@ -354,20 +358,24 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
     trip.distance = total_distance
     trip.duration = total_duration
     trip.ETA = eta.replace(microsecond=0)
-    trip.route = {"route": route} 
-    # print(model_to_dict(trip))
+    trip.route = {"route": route}
+
     return trip
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_passenger_to_trip(request):
+
     dcu_campuses = {
         "gla": "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
         "pat": "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"
     }
+
     if request.method == "POST":
         print("Adding passenger to trip...")
+        passenger_start = request.data["passengerData"]["passengerStart"]
+        passenger_dest = request.data["passengerData"]["passengerDestination"]
         trip_id = request.data.get("tripID")
         if CarpoolUser.objects.filter(id=request.data["passengerData"]["id"]).exists():
             passenger_user = CarpoolUser.objects.get(id=request.data["passengerData"]["id"])
@@ -382,45 +390,37 @@ def add_passenger_to_trip(request):
                 trip.passengers[f"passenger{passenger_user.id}"] = {
                     "passengerName": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
                     "passengerID": request.data["passengerData"]["id"],
-                    "passengerStart": request.data["passengerData"]["passengerStart"]["name"], 
-                    "passengerDestination": request.data["passengerData"]["passengerDestination"]["name"], 
-                } #
-                
-                if trip.start["name"] == request.data["passengerData"]["passengerStart"]["name"]:
-                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
-                        "name": request.data["passengerData"]["passengerDestination"]["name"],
-                        "lat": request.data["passengerData"]["passengerDestination"]["lat"],
-                        "lng": request.data["passengerData"]["passengerDestination"]["lng"],
-                    }
-                elif trip.destination["name"] == request.data["passengerData"]["passengerDestination"]["name"]:
-                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
-                        "name": request.data["passengerData"]["passengerStart"]["name"],
-                        "lat": request.data["passengerData"]["passengerStart"]["lat"],
-                        "lng": request.data["passengerData"]["passengerStart"]["lng"],
-                    }
-                else:
-                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
-                        "name": request.data["passengerData"]["passengerDestination"]["name"],
-                        "lat": request.data["passengerData"]["passengerDestination"]["lat"],
-                        "lng": request.data["passengerData"]["passengerDestination"]["lng"],
-                    }
-                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
-                        "name": request.data["passengerData"]["passengerStart"]["name"],
-                        "lat": request.data["passengerData"]["passengerStart"]["lat"],
-                        "lng": request.data["passengerData"]["passengerStart"]["lng"],
-                    }  
+                    "passengerStart": passenger_start["name"],
+                    "passengerDestination": passenger_dest["name"],
+                }
 
-# what changed in hooks?
- 
+                same_campus = (trip.start["name"] == passenger_start["name"]) or \
+                              (trip.destination["name"] == passenger_dest["name"])
+
+                if (trip.start["name"] in dcu_campuses.values()) and (passenger_start["name"] in dcu_campuses.values()):
+                    trip.waypoints[f"waypoint{len(trip.waypoints) + 1}"] = {
+                        "name": passenger_dest["name"],
+                        "lat": passenger_dest["lat"],
+                        "lng": passenger_dest["lng"],
+                    }
+                    trip.passengers[f"passenger{passenger_user.id}"]["passengerStart"] = trip.start["name"]
+
+                elif trip.destination["name"] in dcu_campuses and passenger_dest["name"] in dcu_campuses.values():
+                    trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
+                        "name": passenger_start["name"],
+                        "lat": passenger_start["lat"],
+                        "lng": passenger_start["lng"],
+                    }
+                    trip.passengers[f"passenger{passenger_user.id}"]["passengerDestination"] = trip.destination["name"]
+
                 trip.available_seats -= 1
 
-                
                 route_details = get_route_details(trip)
                 trip_data = model_to_dict(route_details)
 
                 passenger_user.save()
                 route_details.save()
-                return Response({"trip_data": trip_data}, status=status.HTTP_200_OK)
+                return Response({"trip_data": trip_data, "is_same_campus": same_campus}, status=status.HTTP_200_OK)
 
             return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"error": "Passenger does not exist"}, status=status.HTTP_404_NOT_FOUND)
@@ -446,7 +446,6 @@ def end_trip(request):
             trip.available_seats = len(people) - 1
             trip.save()
 
-            # Trip.objects.get(id=trip_id).delete()
             return Response({"uids": ids_list}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Trip does not exist."}, status=status.HTTP_404_NOT_FOUND)
@@ -461,23 +460,36 @@ def passenger_leave_trip(request):
         passenger = request.user
         if passenger.current_trip is not None:
             trip = passenger.current_trip
-            
+
             temp_passengers_dict = {**trip.passengers}
-            print(temp_passengers_dict)
+            locations_count = {}
+
             for key, passenger in trip.passengers.items():
+                # to prevent removing leaving passengers waypoints if other passengers have it as well
+                if passenger["passengerStart"] not in locations_count:
+                    locations_count[passenger["passengerStart"]] = 1
+                else:
+                    locations_count[passenger["passengerStart"]] += 1
+
+                if passenger["passengerDestination"] not in locations_count:
+                    locations_count[passenger["passengerDestination"]] = 1
+                else:
+                    locations_count[passenger["passengerDestination"]] += 1
 
                 temp_waypoints_dict = {**trip.waypoints}
                 if int(passenger["passengerID"]) == request.user.id:
-                   print("Remove passenger: ", request.user.id)
-                   temp_passengers_dict.pop(key)
-                   passenger_location = passenger["passengerLocation"]
-                   for wkey, waypoint in trip.waypoints.items():
-                       if waypoint["name"] == passenger_location:
-                           print("Remove passenger waypoint")
-                           temp_waypoints_dict.pop(wkey)
-                   trip.waypoints = temp_waypoints_dict
-                   print("Remove waypoint: ", passenger_location)
-            
+                    print("Remove passenger: ", request.user.id)
+                    temp_passengers_dict.pop(key)
+                    passenger_start = passenger["passengerStart"]
+                    passenger_destination = passenger["passengerDestination"]
+                    for waypoint_key, waypoint in trip.waypoints.items():
+                        if waypoint["name"] == passenger_start or waypoint["name"] == passenger_destination:
+                            if locations_count[waypoint["name"]] == 1:
+                                temp_waypoints_dict.pop(waypoint_key)
+                                locations_count[waypoint["name"]] = 0
+
+                    trip.waypoints = temp_waypoints_dict
+
             passenger = request.user
 
             trip.passengers = temp_passengers_dict

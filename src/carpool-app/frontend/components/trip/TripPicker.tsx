@@ -10,7 +10,7 @@ import {updateStatus, updateTripRequestStatus} from "../../reducers/user-reducer
 import {useEffect, useState} from "react";
 import {get, getDatabase, ref} from "firebase/database";
 
-function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filteredTrips, setFilteredTrips, setPreviousTripID}) {
+function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filteredTrips, setFilteredTrips, setPreviousTripID, isTripToDCU}) {
     const db = getDatabase();
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
@@ -43,6 +43,7 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
             duration: trips.duration,
             distance: trips.distance,
             time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(),
+            isPassengerToDCU : isTripToDCU,
         };
 
         if (trips.timeOfDeparture === "") {
@@ -114,10 +115,10 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                         }
                     />
                   }
-                  {/*  */}
-                  {/* */}
+
                   <SwipeablePanel
-                      scrollViewProps={{style: {padding: 10}}}
+                      style={{zIndex: 2, elevation: 2}}
+                      scrollViewProps={{style: {padding: 10, zIndex: 2, elevation: 2}}}
                       fullWidth={true}
                       openLarge={true}
                       closeOnTouchOutside={true}
@@ -147,8 +148,17 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                                               <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
                                               <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
                                               <Text>{tripsFound[tripKey].time_of_departure}</Text>
-                                              <Text>From: {tripsFound[tripKey].start.name}</Text>
-                                              <Text>To: {tripsFound[tripKey].destination.name}</Text>
+                                              {!isTripToDCU ?
+                                                <Text style={{...(tripsFound[tripKey].isCampusSame ? {color: "green"} : {color: "orange"})}}>From: {tripsFound[tripKey].start.name}</Text>
+                                                :
+                                                <Text>From: {tripsFound[tripKey].start.name}</Text>
+                                              }
+
+                                              {isTripToDCU ?
+                                                <Text style={{...(tripsFound[tripKey].isCampusSame ? {color: "green"} : {color: "orange"})}}>To: {tripsFound[tripKey].destination.name}</Text>
+                                                :
+                                                <Text>To: {tripsFound[tripKey].destination.name}</Text>
+                                              }
                                               <Text>ETA: {tripsFound[tripKey].ETA}</Text>
                                           </VStack>
                                           <Button style={{flexDirection: "row", marginLeft: "auto"}}

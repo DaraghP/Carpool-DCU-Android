@@ -12,14 +12,18 @@ function NumberOfSeatsSelector() {
     return (
         (trips.role === "driver" && user.status !== "driver_busy" ?
               <Select
-                  key={v4()}
-                  dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"}/>}
+                  bg="muted.900"
+                  dropdownIcon={<Icon as={Ionicons} name="chevron-down" size={5} color={"gray.400"} marginRight={3}/>}
                   placeholder="Choose your number of available seats"
+                  placeholderTextColor="white"
+                  fontSize={15}
                   onValueChange={value => dispatch(setAvailableSeats(parseInt(value)))}
+                  borderRadius={50}
               >
-                  {[...Array(5).keys()].splice(1).map((number) => {
-                      return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
-                  })
+                  {[...Array(5).keys()].splice(1)
+                      .map((number) => {
+                            return (<Select.Item key={v4()} label={`${number} seats`} value={`${number}`}/>);
+                      })
                   }
               </Select>
         : null)

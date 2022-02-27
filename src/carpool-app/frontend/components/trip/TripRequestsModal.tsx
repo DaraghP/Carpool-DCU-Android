@@ -86,8 +86,7 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
                      <Modal.Header>Requests</Modal.Header>
                      <Modal.Body>
                         <VStack>
-                            {/*  */}
-                            {/* */}
+
                             {Object.keys(firebaseTripRequests).map((key, index) => {
                                     return (
                                         <TouchableOpacity key={v4()}>
@@ -103,9 +102,8 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
                                                 }}>
                                                     Decline
                                                 </Button>
-                                                {/*  */}
                                             </Flex>
-                                            {/*  */}
+
                                         </TouchableOpacity>
                                     )
                                 })
@@ -115,8 +113,7 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
                      </Modal.Body>
                  </Modal.Content>
              </Modal>
-            {/**/}
-            {/* */}
+
             {user.status === "driver_busy" && Object.keys(firebaseTripRequests).length > 0 &&
                 <TouchableOpacity onPress={() => {
                     setShowPassengerRequestsModal(true)

@@ -34,7 +34,7 @@ function PassengerCancelTripButton({filteredTrips, setIsTripToDCU, setCampusSele
                         dispatch(updateUserState({status: "available", tripStatus: "", tripRequestStatus: ""}));
                         passengerCancelTrip(res.available_seats).then(() => {
                             dispatch(resetTripState())
-                            setIsTripToDCU(undefined);
+                            setIsTripToDCU(undefined); // its possible either way
                             setCampusSelected("");
                         })
                     }

@@ -31,10 +31,10 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
         .then(res => {
             // console.log(res);
             if (res.status === 200) { 
-                dispatch(resetTripState());
-                setIsTripToDCU(undefined); // 
-                setCampusSelected(""); 
-                
+                // dispatch(resetTripState());
+                // setIsTripToDCU(undefined); //
+                // setCampusSelected("");
+                //
                 removeFirebaseTrip(trips.id, res.data.uids);
                 // console.log("trip deleted")
             }

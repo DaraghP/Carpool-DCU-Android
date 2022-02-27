@@ -35,7 +35,7 @@ import {
     HStack,
     Divider,
     IconButton,
-    CloseIcon
+    CloseIcon, Box
 } from "native-base";
 import CreateGoogleAutocompleteInput from "../components/trip/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -214,27 +214,19 @@ function TripScreen() {
     // for passenger and driver
     const getOrJoinTrip = () => {
         fetch(`${backendURL}/join_trip`, {
-            method: "POST",
+            method: "GET",
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Token ${user.token}`
-            },
-            body: JSON.stringify({tripID: trips.id})
+            }
         }).then(response => response.json())
             .then((res) => {
                 if (!("error" in res)) {
-
-                    // console.log("test", res.trip_data["waypoints"])
-
                     if (res.trip_data !== null) {
                         convertTripDataFromJSON(res.trip_data);
                     }
 
-
-                    // console.log(trips.id, user.id);
-                    // removeTripRequest(trips.id, user.id);
-                    // dispatch(updateTripRequestStatus(""));
                     if (trips.role === "passenger" && !passengerGotInitialMapData) {
                         setIsPassengerInTrip(true);
                         setPassengerGotInitialMapData(true);
@@ -326,7 +318,7 @@ function TripScreen() {
                 }
 
                 setFirebaseTripsVal(tempFbTripsVal)
-//
+
                 if (trips.role === "passenger" && typeof snapshot.val() === "object" && snapshot.val() !== null) {
                     if (user.id in snapshot.val()) {
                         setIsPassengerInTrip(true);
@@ -350,8 +342,7 @@ function TripScreen() {
 
                         if (snapshot.val().status === "trip_complete" && !resetedAfterTripComplete) {
                             console.log("Passenger reset.")
-                            dispatch(updateUserState({status: "available", tripRequestStatus: undefined}))
-                            dispatch(resetTripState());
+                            dispatch(updateUserState({status: "available", tripRequestStatus: undefined}));
                             setIsTripToDCU(undefined);
                             setCampusSelected("");
                             setShowTripAvailableModal(false);
@@ -378,8 +369,8 @@ function TripScreen() {
         }
         else {
             // passenger has been denied their request
-        }//
-    }, [user.tripRequestStatus])//
+        }
+    }, [user.tripRequestStatus])
 
     useEffect(() => {
         if ((user.status === "passenger_busy" && passengerGotInitialMapData) || user.status==="driver_busy") {
@@ -396,27 +387,29 @@ function TripScreen() {
 
   return (
         <View style={styles.container}>
+            {user.status === "available" &&
+                <>
+                    <CampusDirectionSelector
+                        campusSelected={campusSelected}
+                        setCampusSelected={(value: string) => {setCampusSelected(value)}}
+                        isTripToDCU={isTripToDCU}
+                        setIsTripToDCU={(value: boolean | undefined) => {setIsTripToDCU(value)}}
+                    />
+
+                    <LocationInputGroup isTripToDCU={isTripToDCU} campusSelected={campusSelected}/>
+                </>
+            }
+
             <View style={{flex: 1, elevation: -1, zIndex: -1}}>
                 {user.status === "available" &&
                     <>
-                        <CampusDirectionSelector
-                            campusSelected={campusSelected}
-                            setCampusSelected={(value: string) => {setCampusSelected(value)}}
-                            isTripToDCU={isTripToDCU}
-                            setIsTripToDCU={(value: boolean | undefined) => {setIsTripToDCU(value)}}
-                        />
-
-                        <LocationInputGroup isTripToDCU={isTripToDCU}/>
-
-                          {trips.role === "driver" &&
-                              <Button onPress={() => {
-                              increaseWaypoints();
-                          }}>
-                              <Text color="white">Add waypoint</Text>
-                              </Button>
-                          }
-
-                            <DepartureTimePicker/>
+                        {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+                          <Button onPress={() => {
+                          increaseWaypoints();
+                        }}>
+                          <Text color="white">Add waypoint</Text>
+                          </Button>
+                        }
 
                     </>
                   }
@@ -424,24 +417,21 @@ function TripScreen() {
                   <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
                   <Map/>
 
-            </View>
-            <NumberOfSeatsSelector/>
+
+            <VStack space={2} padding={5} borderTopWidth={0.5}>
+                <Heading size={"md"} flexGrow="1">Pick your departure time {trips.role === "driver" && "\nand number of seats"}</Heading>
+                <Divider/>
+
+                <NumberOfSeatsSelector/>
+                <DepartureTimePicker/>
+            </VStack>
+
 
             {trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                   <Button onPress={() => {createTrip();}}>
                     <Text color="white">Create Trip</Text>
                   </Button>
             }
-
-
-            <TripPicker
-                 setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}
-                 filteredTrips={filteredTrips}
-                 setFilteredTrips={(value) => {setFilteredTrips(value)}}
-                 showTripAvailableModal={showTripAvailableModal}
-                 setShowTripAvailableModal={(value) => {setShowTripAvailableModal(value)}}
-            />
-
 
             {user.status === "driver_busy" &&
                 <DriverCurrentTrip
@@ -460,6 +450,17 @@ function TripScreen() {
             />
 
             <TripScreenAlertModals setResetedAfterTripComplete={(value) => {setResetedAfterTripComplete(value)}}/>
+        </View>
+
+        <TripPicker
+             setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}
+             filteredTrips={filteredTrips}
+             setFilteredTrips={(value) => {setFilteredTrips(value)}}
+             showTripAvailableModal={showTripAvailableModal}
+             setShowTripAvailableModal={(value) => {setShowTripAvailableModal(value)}}
+             isTripToDCU={isTripToDCU}
+        />
+
       </View>
   )
 }

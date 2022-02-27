@@ -134,7 +134,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
                     }
                 </>
             }
-            styles={{container: {flex: 0}, textInput: {fontSize: 20}}}
+            styles={{container: {flex: 0}, textInput: {fontSize: 20}, zIndex: 1, position: "absolute"}}
             query={{
                 key: GOOGLE_API_KEY,
                 language: "en",
