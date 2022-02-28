@@ -9,10 +9,10 @@ import {act} from "react-dom/test-utils";
 const locations = {
     startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: 53.1424, lng: -7.6921}),
     destLocation: createLocationObj("destLocation", "destination", "Destination Point"),
-    waypoint1: createLocationObj("waypoint1", "waypoint", "Waypoint 1"),
-    waypoint2: createLocationObj("waypoint2", "waypoint", "Waypoint 2"),
-    waypoint3: createLocationObj("waypoint3", "waypoint", "Waypoint 3"),
-    waypoint4: createLocationObj("waypoint4", "waypoint", "Waypoint 4"),
+    waypoint1: createLocationObj("waypoint1", "waypoint", "Driver Stop"),
+    waypoint2: createLocationObj("waypoint2", "waypoint", "Driver Stop"),
+    waypoint3: createLocationObj("waypoint3", "waypoint", "Driver Stop"),
+    waypoint4: createLocationObj("waypoint4", "waypoint", "Driver Stop"),
 }
 
 const initialState = {

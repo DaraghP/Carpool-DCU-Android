@@ -136,7 +136,6 @@ function Profile({uid}) {
                                             </VStack>
                                         </>
 
-                                    // should log trips.route from driverCurrentTrip whenever passenger/joins/leaves
                                     }
                                 </HStack>
                             </Box>

@@ -70,13 +70,13 @@ import Map from "../components/trip/Map";
 import TripRequestsModal from "../components/trip/TripRequestsModal";
 import TripPicker from "../components/trip/TripPicker";
 import DriverCurrentTrip from "../components/trip/DriverCurrentTrip";
-import PassengerCancelTripButton from "../components/trip/PassengerCancelTripButton";
 import PassengerCancelRequestButton from "../components/trip/PassengerCancelRequestButton";
 import NumberOfSeatsSelector from "../components/trip/NumberOfSeatsSelector";
 import TripScreenAlertModals from "../components/trip/TripScreenAlertModals";
 import Collapsible from "react-native-collapsible";
 import Accordion from "react-native-collapsible/Accordion";
 import NumOfSeatsAndDepartureTimeCollapsible from "../components/trip/NumOfSeatsAndDepartureTimeCollapsible";
+import PassengerCurrentTrip from "../components/trip/PassengerCurrentTrip";
 
 
 function TripScreen() {
@@ -87,7 +87,7 @@ function TripScreen() {
 
     const [filteredTrips, setFilteredTrips] = useState(new Set());
     const [passengerGotInitialMapData, setPassengerGotInitialMapData] = useState(false);
-    const [resetedAfterTripComplete, setResetedAfterTripComplete] = useState(false);
+    const [isResetAfterTripComplete, setIsResetAfterTripComplete] = useState(false);
     const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null, data: {trip: {status: "waiting", passengers: {}}, tripRequests: {}}});;
     const [tripsFound, setTripsFound] = useState(null);
     const [isPanelActive, setIsPanelActive] = useState(false);
@@ -96,6 +96,7 @@ function TripScreen() {
     const [showTripAvailableModal, setShowTripAvailableModal] = useState(false);
     const [isTripToDCU, setIsTripToDCU] = useState<boolean | undefined>(undefined);
     const [campusSelected, setCampusSelected] = useState("");
+    const [hideMap, setHideMap] = useState(false);
 
     // firebase db
     const db = getDatabase();
@@ -124,7 +125,7 @@ function TripScreen() {
 
         Object.keys(trips.locations).sort().map((locationKey) => {
             if (trips.locations[locationKey].type === "waypoint" && trips.locations[locationKey].info.isEntered) {
-                waypoints[locationKey] = {name: trips.locations[locationKey].marker.description, ...trips.locations[locationKey].info.coords}
+                waypoints[locationKey] = {name: trips.locations[locationKey].marker.description, type: "driver", ...trips.locations[locationKey].info.coords}
             }
         })
 
@@ -177,7 +178,29 @@ function TripScreen() {
         }
     }
 
-    const convertTripDataFromJSON = (tripData) => {
+    const setPassengerTimeAndLocation = () => {
+        let passengerDetails = trips.passengers[`passenger${user.id}`]
+        if (isTripToDCU) {
+            let passengerLoc = passengerDetails["passengerStart"]
+            console.log(passengerLoc)
+            console.log(trips.route["route"].filter((obj) => obj.start !== passengerLoc))
+            //console.log("test -> ", test);//
+            console.log("Trip TO DCU");//
+            //console.log("passenger ToD:", test["departure_time"]);
+            //console.log("passenger Start:", test["start"]); //
+        } else {
+            let passengerLoc = passengerDetails["passengerDestination"]
+            let test = trips.route["route"].find(l => l.destination === passengerLoc);
+            console.log("Trip FROM DCU");
+            console.log("passenger ETA:", test["arrival_time"]);
+            console.log("passenger Destination:", test["destination"]);
+        }
+        // {"passenger2": {"passengerName": "Bob M.", "passengerID": "2", "passengerLocation": "The Hairy Lemon, Stephen Street Lower, Dublin 2, Ireland"}
+        console.log("PassengerDetails -> ",  trips.passengers[`passenger${user.id}`])
+    }
+
+
+    const convertTripDataFromJSON = async (tripData) => {
         if (tripData !== undefined) {
 
             let newWaypoints = {};
@@ -187,14 +210,14 @@ function TripScreen() {
                 Object.keys(tripData["waypoints"]).map((key) => {
                     newWaypoints[key] = createLocationObj(key,
                         "waypoint",
-                        `Waypoint ${key.charAt(key.length - 1)}`,
+                        tripData["waypoints"][key].passenger === undefined ? "Driver Stop" : tripData["waypoints"][key].passenger,
                         {lat: tripData["waypoints"][key].lat, lng: tripData["waypoints"][key].lng},
                         tripData["waypoints"][key].name,
                     true
                     )
                 });
             }
-            console.log(tripData);
+
             dispatch(updateTripState({
                 ...tripData,
                 locations: {
@@ -235,7 +258,11 @@ function TripScreen() {
             .then((res) => {
                 if (!("error" in res)) {
                     if (res.trip_data !== null) {
-                        convertTripDataFromJSON(res.trip_data);
+                        convertTripDataFromJSON(res.trip_data).then(() => {
+                            if (trips.role === "passenger") {
+                                setPassengerTimeAndLocation();
+                            }
+                        })
                     }
 
                     if (trips.role === "passenger" && !passengerGotInitialMapData) {
@@ -351,13 +378,13 @@ function TripScreen() {
                         dispatch(updateTripRequestStatus(snapshot.val().requestStatus));
                         dispatch(updateTripStatus(snapshot.val().status));
 
-                        if (snapshot.val().status === "trip_complete" && !resetedAfterTripComplete) {
+                        if (snapshot.val().status === "trip_complete" && !isResetAfterTripComplete) {
                             console.log("Passenger reset.")
                             dispatch(updateUserState({status: "available", tripRequestStatus: undefined}));
                             setIsTripToDCU(undefined);
                             setCampusSelected("");
                             setShowTripAvailableModal(false);
-                            setResetedAfterTripComplete(true);
+                            setIsResetAfterTripComplete(true);
                         }
                     }
                     else {
@@ -374,13 +401,12 @@ function TripScreen() {
             if (firebaseTripsVal.data.trip.passengers !== null) {
                 if (user.id in firebaseTripsVal.data.trip.passengers) {
                     console.log("passenger in trip!");
+                    setHideMap(true);
                     getOrJoinTrip();
                 }
             }
         }
-        else {
-            // passenger has been denied their request
-        }
+        // else passenger has been denied their request
     }, [user.tripRequestStatus])
 
     useEffect(() => {
@@ -416,7 +442,7 @@ function TripScreen() {
                     <>
                         {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                           <Button onPress={() => {
-                          increaseWaypoints();
+                            increaseWaypoints();
                         }}>
                           <Text color="white">Add waypoint</Text>
                           </Button>
@@ -425,8 +451,10 @@ function TripScreen() {
                 }
 
                 <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
-                <Map/>
 
+                {!hideMap &&
+                    <Map/>
+                }
 
                 <NumOfSeatsAndDepartureTimeCollapsible/>
 
@@ -446,18 +474,20 @@ function TripScreen() {
 
                 {trips.role === "passenger" && user.tripRequestStatus === "waiting" ?
                     <Box style={{ width: "100%", height: "100%", backgroundColor:"yellow", zIndex: 100, elevation: 100, alignSelf: "center", alignItems:"center", justifyContent:"center"}}>
-                        <PassengerCancelRequestButton setPreviousTripID={(value) => {setPreviousTripID(value)}}/>
+                        <PassengerCancelRequestButton setPreviousTripID={(value) => {setPreviousTripID(value)}} setHideMap={(value) => {setHideMap(value)}}/>
                     </Box>
                 : null
                 }
 
-                <PassengerCancelTripButton
+                <PassengerCurrentTrip
+                    isTripToDCU={isTripToDCU}
                     setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
                     setCampusSelected={(value) => {setCampusSelected(value)}}
                     filteredTrips={filteredTrips}
+                    isTripDeparted={firebaseTripsVal.data.trip.status === "departed"}
                 />
 
-                <TripScreenAlertModals setResetedAfterTripComplete={(value) => {setResetedAfterTripComplete(value)}}/>
+                <TripScreenAlertModals setIsResetAfterTripComplete={(value) => {setIsResetAfterTripComplete(value)}} setHideMap={(value) => {setHideMap(value)}}/>
             </View>
 
             <TripPicker

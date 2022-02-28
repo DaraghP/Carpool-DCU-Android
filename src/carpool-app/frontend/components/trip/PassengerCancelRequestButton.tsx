@@ -11,7 +11,6 @@ function PassengerCancelRequestButton({setPreviousTripID}) {
     const trips = useAppSelector(state => state.trips);
     const user = useAppSelector(state => state.user);
 
-
     return (
         (trips.role === "passenger" && user.tripRequestStatus === "waiting" ?
           <View>

@@ -24,7 +24,7 @@ function LocationInputGroup({isTripToDCU, campusSelected}) {
                 : null
             }
 
-            {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+            {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                 Object.keys(trips.locations).sort().map((key) => {
                       if (trips.locations[key].type === "waypoint") {
                           if (parseInt(key.charAt(key.length - 1)) <= trips.numberOfWaypoints) {

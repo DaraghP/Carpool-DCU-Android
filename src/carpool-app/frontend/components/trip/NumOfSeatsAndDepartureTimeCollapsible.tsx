@@ -12,8 +12,7 @@ function NumOfSeatsAndDepartureTimeCollapsible() {
 
     const [showDepartureAndTimePickerCollapsible, setShowDepartureAndTimePickerCollapsible] = useState(true);
 
-// trips.32.driverName, undefined in property, set failed
-    return (// whats it say
+    return (
         (trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered ?
                 <>
                     <Button

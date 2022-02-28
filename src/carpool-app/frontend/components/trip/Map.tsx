@@ -128,7 +128,7 @@ function Map() {
                       }
                           : undefined)
                       }
-                      //optimizeWaypoints={false}
+                      optimizeWaypoints={true}
                       onReady={data => {distanceDurationHandler(data)}}
                       apikey={GOOGLE_API_KEY}
                       strokeWidth={3}

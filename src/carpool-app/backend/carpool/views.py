@@ -227,9 +227,11 @@ def create_trip(request):
             driver = Driver.objects.get(uid=request.user.id)
             trip = TripSerializer({"driver_id": driver, **request.data})
             trip = trip.create({"driver_id": driver, **request.data})
+            # trip.time_of_departure = datetime.strptime(trip.time_of_departure, "%H:%M %m/%d/%Y")
+            # trip = get_route_details(trip)
             request.user.current_trip = trip
             request.user.status = "driver_busy"
-            request.user.save() # its using res.driverName in react tho? follow
+            request.user.save()
             return Response({"tripID": trip.id, "driverID": driver.id}, status=status.HTTP_200_OK)
         return Response({"error": "You already have an ongoing trip."})
 
@@ -351,12 +353,12 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
 
     directions_base_url = "https://maps.googleapis.com/maps/api/directions/json"
     directions_url = urllib.parse.quote(
-        f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints={waypoints}|{passenger_location}|{passenger_secondary_location}&key={settings.GOOGLE_API_KEY}",
+        f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints=optimize:true|{waypoints}|{passenger_location}|{passenger_secondary_location}&key={settings.GOOGLE_API_KEY}",
         safe='=?:/&'
     )
     print(directions_url)
+    # TODO: Match address names using waypoint_order
     response = requests.get(directions_url)
-    # print(response.json())
 
     distance_calculation = 0
     duration_calculation = 0
@@ -425,9 +427,9 @@ def add_passenger_to_trip(request):
             passenger_user = CarpoolUser.objects.get(id=request.data["passengerData"]["id"])
             if Trip.objects.filter(id=trip_id).exists():
                 trip = Trip.objects.get(id=trip_id)
-                if trip.passengers.get(f"passenger{passenger_user.id}") is None:
-                    passenger_user.current_trip = trip
-                    passenger_user.status = "passenger_busy"
+                if trip.passengers.get(f"passenger{passenger_user.id}") is None: # it was
+                    passenger_user.current_trip = trip  #
+                    passenger_user.status = "passenger_busy" # theres an error in frontend with waypoints
                 else:
                     return Response({"error": "passenger already in the same trip."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -441,9 +443,10 @@ def add_passenger_to_trip(request):
                 same_campus = (trip.start["name"] == passenger_start["name"]) or \
                               (trip.destination["name"] == passenger_dest["name"])
 
-                if (trip.start["name"] in dcu_campuses.values()) and (passenger_start["name"] in dcu_campuses.values()):
-                    trip.waypoints[f"waypoint{len(trip.waypoints) + 1}"] = {
+                if (trip.start["name"] in dcu_campuses.values()) and (passenger_start["name"] in dcu_campuses.values()): #
+                    trip.waypoints[f"waypoint{len(trip.waypoints) + 1}"] = { #
                         "name": passenger_dest["name"],
+                        "passenger": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
                         "lat": passenger_dest["lat"],
                         "lng": passenger_dest["lng"],
                     }
@@ -452,6 +455,7 @@ def add_passenger_to_trip(request):
                 elif (trip.destination["name"] in dcu_campuses.values()) and (passenger_dest["name"] in dcu_campuses.values()):
                     trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
                         "name": passenger_start["name"],
+                        "passenger": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
                         "lat": passenger_start["lat"],
                         "lng": passenger_start["lng"],
                     }
@@ -481,15 +485,12 @@ def end_trip(request):
             people = CarpoolUser.objects.filter(current_trip=trip_id)
 
             ids_list = []
-            trip = Trip.objects.get(id=trip_id)
+            # trip = Trip.objects.get(id=trip_id)
             for user in people:
                 ids_list.append(user.id)
                 user.status = "available"
                 user.current_trip = None
                 user.save()
-
-            trip.available_seats = len(people) - 1
-            trip.save()
 
             return Response({"uids": ids_list}, status=status.HTTP_200_OK)
         else:

@@ -30,23 +30,13 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
         }).then(response => response.json().then(data => ({status: response.status, data: data})))
         .then(res => {
             // console.log(res);
-            if (res.status === 200) { 
-                // dispatch(resetTripState());
-                // setIsTripToDCU(undefined); //
-                // setCampusSelected("");
-                //
+            if (res.status === 200) {
                 removeFirebaseTrip(trips.id, res.data.uids);
-                // console.log("trip deleted")
             }
             dispatch(updateStatus("available"));
         })
     }
 
-    useEffect(() => {
-        if (trips.route != null){
-            console.log("ROUTE", trips.route);
-        } // prob
-    }, [trips.duration])
 
     // end
     const endTrip = () => {
