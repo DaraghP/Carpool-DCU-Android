@@ -124,6 +124,42 @@ def delete_account(request):
     request.user.delete()
     return Response(status=status.HTTP_200_OK)
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def set_profile_description(request):
+    """
+    Sets profile description of a user who has sent the request
+    """
+
+    if request.method == "POST":
+        profile_description = request.data.get("profileDescription")
+        if type(profile_description) == str:
+            request.user.profile_description = profile_description
+            request.user.save()
+            return Response(status=status.HTTP_200_OK)
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def get_profile(request):
+    """
+    Gets profile of a user
+    """
+
+    if request.method == "POST":
+        uid = request.data.get("uid")
+        if CarpoolUser.objects.filter(id=uid).exists():
+            user = CarpoolUser.objects.get(id=uid)
+            return Response({
+                "username": user.username,
+                "first_name": user.first_name,
+                "profile_description": user.profile_description
+            }, status=status.HTTP_200_OK)
+#
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -193,7 +229,7 @@ def create_trip(request):
             trip = trip.create({"driver_id": driver, **request.data})
             request.user.current_trip = trip
             request.user.status = "driver_busy"
-            request.user.save()
+            request.user.save() # its using res.driverName in react tho? follow
             return Response({"tripID": trip.id, "driverID": driver.id}, status=status.HTTP_200_OK)
         return Response({"error": "You already have an ongoing trip."})
 
@@ -318,19 +354,25 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints={waypoints}|{passenger_location}|{passenger_secondary_location}&key={settings.GOOGLE_API_KEY}",
         safe='=?:/&'
     )
+    print(directions_url)
     response = requests.get(directions_url)
+    # print(response.json())
 
     distance_calculation = 0
     duration_calculation = 0
-
+    departure_time = datetime.timestamp(trip.time_of_departure)
     route = []
     for leg in response.json()["routes"][0]["legs"]:
+        arrival_time = departure_time + int(leg["duration"]["value"])
         waypoint_info = {
             "start": leg["start_address"],
             "destination": leg["end_address"],
             "distance": leg["distance"]["text"],
             "duration": leg["duration"]["text"],
+            "departure_time": datetime.fromtimestamp(departure_time).replace(microsecond=0).strftime("%H:%M %m/%d/%Y"),
+            "arrival_time": datetime.fromtimestamp(arrival_time).replace(microsecond=0).strftime("%H:%M %m/%d/%Y")
         }
+        # seconds= TIME.datetime.timestamp()
 
         if "km" in leg["distance"]["text"]:
             distance_calculation += float(leg["distance"]["text"].replace(",", "")[:-3])
@@ -338,6 +380,8 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
             distance_calculation += float(leg["distance"]["text"][:-2]) // 1000
 
         duration_calculation += int(leg["duration"]["value"])
+
+        departure_time += int(leg["duration"]["value"])
 
         # shows distance & duration between waypoints
         print(waypoint_info)
@@ -405,7 +449,7 @@ def add_passenger_to_trip(request):
                     }
                     trip.passengers[f"passenger{passenger_user.id}"]["passengerStart"] = trip.start["name"]
 
-                elif trip.destination["name"] in dcu_campuses and passenger_dest["name"] in dcu_campuses.values():
+                elif (trip.destination["name"] in dcu_campuses.values()) and (passenger_dest["name"] in dcu_campuses.values()):
                     trip.waypoints[f"waypoint{len(trip.waypoints)+1}"] = {
                         "name": passenger_start["name"],
                         "lat": passenger_start["lat"],
@@ -414,8 +458,9 @@ def add_passenger_to_trip(request):
                     trip.passengers[f"passenger{passenger_user.id}"]["passengerDestination"] = trip.destination["name"]
 
                 trip.available_seats -= 1
-
+                print("BEFORE:", trip.waypoints)
                 route_details = get_route_details(trip)
+                print("AFTER:", route_details.waypoints)
                 trip_data = model_to_dict(route_details)
 
                 passenger_user.save()

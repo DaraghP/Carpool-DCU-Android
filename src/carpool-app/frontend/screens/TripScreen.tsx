@@ -1,4 +1,12 @@
-import {StyleSheet, View, ScrollView, SafeAreaView, TouchableOpacity, Alert as SystemAlert} from "react-native";
+import {
+    StyleSheet,
+    View,
+    ScrollView,
+    SafeAreaView,
+    TouchableOpacity,
+    Alert as SystemAlert,
+    Dimensions
+} from "react-native";
 import {useEffect, useRef, useState} from "react";
 import "react-native-get-random-values";
 import {v4} from "uuid";
@@ -35,7 +43,7 @@ import {
     HStack,
     Divider,
     IconButton,
-    CloseIcon, Box
+    CloseIcon, Box, Collapse, Container
 } from "native-base";
 import CreateGoogleAutocompleteInput from "../components/trip/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -66,6 +74,9 @@ import PassengerCancelTripButton from "../components/trip/PassengerCancelTripBut
 import PassengerCancelRequestButton from "../components/trip/PassengerCancelRequestButton";
 import NumberOfSeatsSelector from "../components/trip/NumberOfSeatsSelector";
 import TripScreenAlertModals from "../components/trip/TripScreenAlertModals";
+import Collapsible from "react-native-collapsible";
+import Accordion from "react-native-collapsible/Accordion";
+import NumOfSeatsAndDepartureTimeCollapsible from "../components/trip/NumOfSeatsAndDepartureTimeCollapsible";
 
 
 function TripScreen() {
@@ -150,9 +161,9 @@ function TripScreen() {
                 },
                 body: JSON.stringify(trip_data)
             }).then(response => response.json())
-                .then(res => {
+                .then(res => { //
                     if (!("errorType" in res)) {
-                        let isFirebaseTripCreated = createFirebaseTrip(user.status, trip_data.available_seats, res.tripID, res.driverID);
+                        let isFirebaseTripCreated = createFirebaseTrip(user.status, trip_data.available_seats, res.tripID, res.driverID, `${user.firstName} ${user.lastName[0]}.`);
                         if (isFirebaseTripCreated) {
                             dispatch(updateStatus("driver_busy"));
                         }
@@ -183,7 +194,7 @@ function TripScreen() {
                     )
                 });
             }
-
+            console.log(tripData);
             dispatch(updateTripState({
                 ...tripData,
                 locations: {
@@ -388,7 +399,7 @@ function TripScreen() {
   return (
         <View style={styles.container}>
             {user.status === "available" &&
-                <>
+                <View>
                     <CampusDirectionSelector
                         campusSelected={campusSelected}
                         setCampusSelected={(value: string) => {setCampusSelected(value)}}
@@ -397,7 +408,7 @@ function TripScreen() {
                     />
 
                     <LocationInputGroup isTripToDCU={isTripToDCU} campusSelected={campusSelected}/>
-                </>
+                </View>
             }
 
             <View style={{flex: 1, elevation: -1, zIndex: -1}}>
@@ -410,56 +421,53 @@ function TripScreen() {
                           <Text color="white">Add waypoint</Text>
                           </Button>
                         }
-
                     </>
-                  }
+                }
 
-                  <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
-                  <Map/>
-
-
-            <VStack space={2} padding={5} borderTopWidth={0.5}>
-                <Heading size={"md"} flexGrow="1">Pick your departure time {trips.role === "driver" && "\nand number of seats"}</Heading>
-                <Divider/>
-
-                <NumberOfSeatsSelector/>
-                <DepartureTimePicker/>
-            </VStack>
+                <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
+                <Map/>
 
 
-            {trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
-                  <Button onPress={() => {createTrip();}}>
-                    <Text color="white">Create Trip</Text>
-                  </Button>
-            }
+                <NumOfSeatsAndDepartureTimeCollapsible/>
 
-            {user.status === "driver_busy" &&
-                <DriverCurrentTrip
-                    isTripDeparted={firebaseTripsVal.data.trip.status === "departed"}
-                    setCampusSelected={(value) => {setCampusSelected(value);}}
+                {trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
+                      <Button onPress={() => {createTrip();}}>
+                        <Text color="white">Create Trip</Text>
+                      </Button>
+                }
+
+                {user.status === "driver_busy" &&
+                    <DriverCurrentTrip
+                        isTripDeparted={firebaseTripsVal.data.trip.status === "departed"}
+                        setCampusSelected={(value) => {setCampusSelected(value);}}
+                        setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
+                    />
+                }
+
+                {trips.role === "passenger" && user.tripRequestStatus === "waiting" ?
+                    <Box style={{ width: "100%", height: "100%", backgroundColor:"yellow", zIndex: 100, elevation: 100, alignSelf: "center", alignItems:"center", justifyContent:"center"}}>
+                        <PassengerCancelRequestButton setPreviousTripID={(value) => {setPreviousTripID(value)}}/>
+                    </Box>
+                : null
+                }
+
+                <PassengerCancelTripButton
                     setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
+                    setCampusSelected={(value) => {setCampusSelected(value)}}
+                    filteredTrips={filteredTrips}
                 />
-            }
 
-            <PassengerCancelRequestButton setPreviousTripID={(value) => {setPreviousTripID(value)}}/>
+                <TripScreenAlertModals setResetedAfterTripComplete={(value) => {setResetedAfterTripComplete(value)}}/>
+            </View>
 
-            <PassengerCancelTripButton
-                setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
-                setCampusSelected={(value) => {setCampusSelected(value)}}
-                filteredTrips={filteredTrips}
+            <TripPicker
+                 setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}
+                 filteredTrips={filteredTrips}
+                 setFilteredTrips={(value) => {setFilteredTrips(value)}}
+                 showTripAvailableModal={showTripAvailableModal}
+                 setShowTripAvailableModal={(value) => {setShowTripAvailableModal(value)}}
+                 isTripToDCU={isTripToDCU}
             />
-
-            <TripScreenAlertModals setResetedAfterTripComplete={(value) => {setResetedAfterTripComplete(value)}}/>
-        </View>
-
-        <TripPicker
-             setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}
-             filteredTrips={filteredTrips}
-             setFilteredTrips={(value) => {setFilteredTrips(value)}}
-             showTripAvailableModal={showTripAvailableModal}
-             setShowTripAvailableModal={(value) => {setShowTripAvailableModal(value)}}
-             isTripToDCU={isTripToDCU}
-        />
 
       </View>
   )

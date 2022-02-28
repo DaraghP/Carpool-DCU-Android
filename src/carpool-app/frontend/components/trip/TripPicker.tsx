@@ -179,7 +179,7 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                                                   storeTripRequest(tripsFound[tripKey].pk, passengerData).then((isStored) => {
                                                       if (!filteredTrips.has(`${tripsFound[tripKey].pk}`) && isStored) {
                                                           setPreviousTripID(trips.id);
-                                                          dispatch(updateTripState({id: tripsFound[tripKey].pk}));
+                                                          dispatch(updateTripState({id: tripsFound[tripKey].pk, driverName: tripsFound[tripKey].driver_name}));
 
                                                           dispatch(updateTripRequestStatus("waiting"));
                                                           dispatch(updateStatus("passenger_busy"));

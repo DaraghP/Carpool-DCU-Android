@@ -19,9 +19,10 @@ export default function Index() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(state => state.user);
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
-
+  //
+  //
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://e57d-46-7-17-96.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://7a54-46-7-17-96.ngrok.io"}));
   }, [])
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Index() {
               <>
                 <Tab.Screen name="Home" component={HomeScreen}
                   options={
-                    {tabBarIcon: () => {return <Ionicons name="home" size={25} color={"grey"}/>;}}
+                    {tabBarIcon: () => {return <Ionicons name="home" size={25} color={"grey"}/>;}, headerShown: false}
                   }
                 />
                 <Tab.Screen name="Passenger" component={PassengerScreen}

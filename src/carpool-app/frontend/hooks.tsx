@@ -1,6 +1,7 @@
 import {TypedUseSelectorHook, useDispatch, useSelector} from "react-redux";
 import {AppDispatch, RootState} from "./store";
 import {getDatabase, ref, get, set, onValue, remove, update} from "firebase/database";
+import {updateUserDescription} from "./reducers/user-reducer";
 
 
 // redux typescript hooks
@@ -36,7 +37,7 @@ export const createLocationObj = (key: string, type: string, typeTitle: string, 
 }
 
 // firebase
-export function createFirebaseTrip(status, availableSeats, tripID, driverID) {
+export function createFirebaseTrip(status, availableSeats, tripID, driverID, driverName) {
 
     if (status === "available") {
         const db = getDatabase();
@@ -44,6 +45,7 @@ export function createFirebaseTrip(status, availableSeats, tripID, driverID) {
         set(reference, {
             status: "waiting",
             driverID: driverID,
+            driverName: driverName,
             passengers: {},
             availableSeats: availableSeats
         })

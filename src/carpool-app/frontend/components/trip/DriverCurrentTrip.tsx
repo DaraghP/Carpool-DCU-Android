@@ -42,6 +42,12 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
         })
     }
 
+    useEffect(() => {
+        if (trips.route != null){
+            console.log("ROUTE", trips.route);
+        } // prob
+    }, [trips.duration])
+
     // end
     const endTrip = () => {
         fetch(`${backendURL}/end_trip`, {

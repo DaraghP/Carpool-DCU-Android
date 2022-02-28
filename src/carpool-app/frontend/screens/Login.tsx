@@ -51,6 +51,10 @@ function LoginScreen({ navigation }) {
 
                         if (snapshot.val()?.tripRequested.requestStatus) {
                             dispatch(updateUserState({status: "passenger_busy"}));
+                            get(ref(db, `/trips/${snapshot.val()?.tripRequested.tripID}`))
+                                .then((snapshot2) => {
+                                        dispatch(updateTripState({driverName: snapshot2.val()?.driverName}))
+                                })
                         }
                     })
             }

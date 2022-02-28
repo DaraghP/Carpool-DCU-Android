@@ -1,4 +1,4 @@
-import {Box, Button, Heading, Text} from "native-base";
+import {Box, Button, Heading, Text, Modal, Spinner, Center} from "native-base";
 import {getDatabase, ref, remove, update} from "firebase/database";
 import {updateUserState} from "../../reducers/user-reducer";
 import {updateTripState} from "../../reducers/trips-reducer";
@@ -15,12 +15,14 @@ function PassengerCancelRequestButton({setPreviousTripID}) {
     return (
         (trips.role === "passenger" && user.tripRequestStatus === "waiting" ?
           <View>
-            <Box padding="5">
-                <Heading size="md" alignSelf="center" mt="3">Awaiting Response from Driver </Heading>
+            <Box padding="5" bg="gray.700" rounded="lg" width="150%" alignSelf="center">
+
+                <Heading color="white" size="md" alignSelf="center" mt="3" mb="1.5">Request Sent to "{trips.driverName}"</Heading>
+                <Heading color="white" size="md" alignSelf="center" paddingTop="1.5" borderTopColor="white" borderTopWidth="0.5">Awaiting Response from Driver</Heading>
+                <Spinner padding="3" size="lg"/>
                 <Button
-                        width="50%"
-                        alignSelf="center"
                         mt="2"
+                        colorScheme="red"
                         onPress={() => {
                             remove(ref(db, `/tripRequests/${trips.id}/${user.id}`));
                             update(ref(db, `/users/`), {[`/${user.id}`]: {tripRequested: null}})

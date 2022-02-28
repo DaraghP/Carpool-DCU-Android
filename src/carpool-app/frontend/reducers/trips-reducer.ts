@@ -17,6 +17,7 @@ const locations = {
 
 const initialState = {
     role: "",
+    driverName: "",
     locations: locations,
     markerRefs: {},
     numberOfWaypoints: 0,
@@ -25,6 +26,7 @@ const initialState = {
     duration: "",
     timeOfDeparture: "",
     availableSeats: 1,
+    route : {}
 }
 
 
