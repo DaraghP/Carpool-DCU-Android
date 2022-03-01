@@ -129,6 +129,19 @@ function TripScreen() {
             }
         })
 
+        let initialETA;
+        if (trips.timeOfDeparture === "") {
+            initialETA = new Date()
+        } else {
+            initialETA = new Date(trips.timeOfDeparture)
+        }
+    
+        
+        console.log(initialETA)
+        initialETA.setSeconds(initialETA.getSeconds() + trips.initialDurationSeconds)
+        console.log(initialETA)
+        console.log("TEST:", initialETA.toLocaleTimeString()); 
+
         let trip_data = {
             start: {
                 name: trips.locations.startingLocation.marker.description,
@@ -145,10 +158,11 @@ function TripScreen() {
             available_seats: trips.availableSeats,
             duration: trips.duration,
             distance: trips.distance,
-            time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(),
+            time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(), 
+            ETA: initialETA,
         };
 
-        if (trips.timeOfDeparture === "") {
+        if (trips.timeOfDeparture === "") { 
             dispatch(setTimeOfDeparture(new Date().toString()));
         }
 
@@ -162,14 +176,14 @@ function TripScreen() {
                 },
                 body: JSON.stringify(trip_data)
             }).then(response => response.json())
-                .then(res => { //
+                .then(res => {
                     if (!("errorType" in res)) {
                         let isFirebaseTripCreated = createFirebaseTrip(user.status, trip_data.available_seats, res.tripID, res.driverID, `${user.firstName} ${user.lastName[0]}.`);
                         if (isFirebaseTripCreated) {
-                            dispatch(updateStatus("driver_busy"));
+                            dispatch(updateStatus("driver_busy"));  
                         }
                         setPreviousTripID(trips.id)
-                        dispatch(updateTripState({id: res.tripID}));
+                        dispatch(updateTripState({id: res.tripID, ETA: res.ETA}));
                         setFirebaseTripsVal({tripID: res.tripID, driverID: res.driverID, data: {trip: {}, tripRequests: {}}});
                     } else {
                         console.log(res.errorType, res.errorMessage);
@@ -179,24 +193,27 @@ function TripScreen() {
     }
 
     const setPassengerTimeAndLocation = () => {
-        let passengerDetails = trips.passengers[`passenger${user.id}`]
-        if (isTripToDCU) {
-            let passengerLoc = passengerDetails["passengerStart"]
-            console.log(passengerLoc)
-            console.log(trips.route["route"].filter((obj) => obj.start !== passengerLoc))
-            //console.log("test -> ", test);//
-            console.log("Trip TO DCU");//
-            //console.log("passenger ToD:", test["departure_time"]);
-            //console.log("passenger Start:", test["start"]); //
+        let passengerDetails = trips.passengers[`passenger${user.id}`];
+        console.log("test ", passengerDetails)
+        if (isTripToDCU) { 
+            let passengerLoc = passengerDetails["passengerStart"]; 
+            let test = trips.route["route"].filter((obj) => obj.start !== passengerLoc);
+            dispatch(updateTripState({
+                "passengerDepartureTime": test["departure_time"], 
+                "passengerArrivalTime" : trips.ETA,
+                "passengerStartLoc": test["start"],
+                "passengerDestLoc": trips.locations.destLocation.marker.description
+            }))
         } else {
             let passengerLoc = passengerDetails["passengerDestination"]
             let test = trips.route["route"].find(l => l.destination === passengerLoc);
-            console.log("Trip FROM DCU");
-            console.log("passenger ETA:", test["arrival_time"]);
-            console.log("passenger Destination:", test["destination"]);
+            dispatch(updateTripState({
+                "passengerDepartureTime": trips.timeOfDeparture, 
+                "passengerArrivalTime" : test["arrival_time"],
+                "passengerStartLoc": trips.locations.startingLocation.marker.description,
+                "passengerDestLoc": test["destination"]
+            }))
         }
-        // {"passenger2": {"passengerName": "Bob M.", "passengerID": "2", "passengerLocation": "The Hairy Lemon, Stephen Street Lower, Dublin 2, Ireland"}
-        console.log("PassengerDetails -> ",  trips.passengers[`passenger${user.id}`])
     }
 
 

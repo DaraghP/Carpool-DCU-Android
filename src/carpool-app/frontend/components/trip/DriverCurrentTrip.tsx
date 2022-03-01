@@ -60,6 +60,16 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
         })
     }
 
+    // useEffect(() => {
+
+    //     console.log(trips.initialETA)
+    //     console.log(trips.ETA)
+    // }, [trips.initialETA, trips.ETA])
+
+    const timedate = (date) => { 
+        return `${new Date(date).toLocaleTimeString().slice(0, 5)} ${new Date(date).toLocaleDateString()}` 
+    } //
+
     return (
              <View style={{padding: 10}}>
                   <Heading mb={2}>Current Trip</Heading>
@@ -67,12 +77,12 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                   <Text>{trips.locations.startingLocation.marker.description}</Text>
                   <Text>To: {trips.locations.destLocation.marker.description}</Text>
                   <Text>Departure Time:</Text>
-                  <Text style={{fontWeight: "bold"}}>{new Date(trips.timeOfDeparture).toLocaleTimeString().slice(0, 5)} {new Date(trips.timeOfDeparture).toLocaleDateString()}</Text>
+                  <Text style={{fontWeight: "bold"}}>{timedate(trips.timeOfDeparture)}</Text>
 
-                  <Text>ETA: {trips.ETA}</Text>{/* timeofDeparture + duration*/}
+                  <Text style={{fontWeight: "bold"}}>ETA: {timedate(trips.ETA)}</Text>
                   <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
                       return (<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>)
-                    })
+                    })// 
                   }
                   </Text>
 

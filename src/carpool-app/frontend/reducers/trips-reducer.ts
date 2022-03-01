@@ -26,7 +26,8 @@ const initialState = {
     duration: "",
     timeOfDeparture: "",
     availableSeats: 1,
-    route : {}
+    route: {},
+    ETA: "",
 }
 
 

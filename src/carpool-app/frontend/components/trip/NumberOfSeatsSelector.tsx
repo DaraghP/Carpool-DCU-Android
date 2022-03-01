@@ -20,6 +20,7 @@ function NumberOfSeatsSelector({}) {
                   fontSize={15}
                   onValueChange={value => {dispatch(setAvailableSeats(parseInt(value)))}}
                   borderRadius={50}
+                  pl={5}
               >
                   {[...Array(5).keys()].splice(1)
                       .map((number) => {

@@ -27,7 +27,7 @@ function DepartureTimePicker() {
 
     return (
         <>
-              <Button bg="muted.900" style={{alignItems: "flex-start", justifyContent: "flex-start"}} rounded={20} onPress={() => {
+              <Button pl={5} bg="muted.900" style={{alignItems: "flex-start", justifyContent: "flex-start"}} rounded={20} onPress={() => {
                   setTimePickerVisibility(true);
                   let date = new Date();
                   date.setMinutes(date.getMinutes() + 5);

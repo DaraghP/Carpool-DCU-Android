@@ -67,31 +67,27 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
             <View>
 
                 <Heading mb={2}>Current Trip</Heading>
-                <Text>From: {trips.locations.startingLocation.marker.description}</Text>
-                <Text>To: {trips.locations.destLocation.marker.description}</Text>
-                {isTripToDCU ?
-                    <HStack space={"auto"}>
-                        <VStack>
-                            <Text>Departure Time:</Text>
-                            <Text
-                                style={{fontWeight: "bold"}}>{new Date(trips.timeOfDeparture).toLocaleTimeString().slice(0, 5)} {new Date(trips.timeOfDeparture).toLocaleDateString()}</Text>
-                        </VStack>
-                        <VStack style={{
-                            flexDirection: "row",
-                            marginLeft: "auto",
-                            justifyContent: "flex-end",
-                            alignSelf: "flex-end"
-                       }}>
+                <Text>From: {trips.passengerStartLoc}</Text>
+                <Text>To: {trips.passengerDestLoc}</Text>
+                <HStack space={"auto"}>
+                    <VStack>
+                        <Text>Departure Time:</Text>
+                        <Text
+                            style={{fontWeight: "bold"}}>{new Date(trips.passengerDepartureTime).toLocaleTimeString().slice(0, 5)} {new Date(trips.passengerDepartureTime).toLocaleDateString()}</Text>
+                    </VStack>
+                    
+                    <VStack style={{
+                        flexDirection: "row",
+                        marginLeft: "auto",
+                        justifyContent: "flex-end",
+                        alignSelf: "flex-end" 
+                    }}>
 
-                            {/* */}
-                            <Text>Arrival Time:</Text>
-                            <Text>{new Date(trips.ETA).toLocaleTimeString().slice(0, 5)}</Text>{/* timeofDeparture + duration*/}
-                        </VStack>
-                    </HStack>
+                        <Text>Arrival Time:</Text>
+                        <Text>{new Date(trips.passengerArrivalTime).toLocaleTimeString().slice(0, 5)}</Text>
+                    </VStack>
+                </HStack>
 
-                    :
-                    null
-                }
                 <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
                         return (<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>);
                     })

@@ -20,7 +20,7 @@ export default function Index() {
   const user = useAppSelector(state => state.user);
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://7a54-46-7-17-96.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://b51e-2001-bb6-6792-1a00-d582-28ad-fed5-3d80.ngrok.io"}));
   }, [])
 
   useEffect(() => {

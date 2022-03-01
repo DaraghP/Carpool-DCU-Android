@@ -222,17 +222,18 @@ def create_trip(request):
     Creates trip for driver, for the passengers to search for. 
     """
 
-    if request.method == 'POST':
+    if request.method == 'POST': 
         if request.user.status == "available":
             driver = Driver.objects.get(uid=request.user.id)
+            print({"driver_id": driver, **request.data})
             trip = TripSerializer({"driver_id": driver, **request.data})
-            trip = trip.create({"driver_id": driver, **request.data})
-            # trip.time_of_departure = datetime.strptime(trip.time_of_departure, "%H:%M %m/%d/%Y")
-            # trip = get_route_details(trip)
+
+            trip = trip.create({"driver_id": driver, **request.data}) 
+            
             request.user.current_trip = trip
             request.user.status = "driver_busy"
             request.user.save()
-            return Response({"tripID": trip.id, "driverID": driver.id}, status=status.HTTP_200_OK)
+            return Response({"tripID": trip.id, "driverID": driver.id, "ETA": trip.ETA}, status=status.HTTP_200_OK)
         return Response({"error": "You already have an ongoing trip."})
 
     return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -356,9 +357,26 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         f"{directions_base_url}?destination={trip.destination['name']}&origin={trip.start['name']}&waypoints=optimize:true|{waypoints}|{passenger_location}|{passenger_secondary_location}&key={settings.GOOGLE_API_KEY}",
         safe='=?:/&'
     )
-    print(directions_url)
+
+    previous_waypoint_order = {}
+    wp_list = list(trip.waypoints.values())
+    
+    i = 0
+    while i < len(wp_list):
+        previous_waypoint_order[i] = wp_list[i]["name"]
+        i += 1
+    
+    if passenger_location != "":
+        previous_waypoint_order[i] = passenger_location
+
+    print("NEWDICT : ", previous_waypoint_order)
+
+    #print(directions_url)
     # TODO: Match address names using waypoint_order
     response = requests.get(directions_url)
+
+    waypoint_order = response.json()["routes"][0].get("waypoint_order")
+    print("ORDER ->", waypoint_order)
 
     distance_calculation = 0
     duration_calculation = 0
@@ -374,7 +392,6 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
             "departure_time": datetime.fromtimestamp(departure_time).replace(microsecond=0).strftime("%H:%M %m/%d/%Y"),
             "arrival_time": datetime.fromtimestamp(arrival_time).replace(microsecond=0).strftime("%H:%M %m/%d/%Y")
         }
-        # seconds= TIME.datetime.timestamp()
 
         if "km" in leg["distance"]["text"]:
             distance_calculation += float(leg["distance"]["text"].replace(",", "")[:-3])
@@ -386,8 +403,20 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         departure_time += int(leg["duration"]["value"])
 
         # shows distance & duration between waypoints
-        print(waypoint_info)
         route.append(waypoint_info)
+
+    print("\nBEFORE:\n", route)
+    new_route = []
+    route[0]["start"] = trip.start["name"]
+    i = 0
+    while i < len(route) - 1:
+        route[i]["destination"] = previous_waypoint_order[waypoint_order[i]]
+        route[i+1]["start"] = previous_waypoint_order[waypoint_order[i]]
+        i+=1
+    route[-1]["destination"] = trip.destination["name"]
+    #
+    
+    print("\nAFTER\n", route)
 
     trip_time = timedelta(seconds=duration_calculation)
     eta = trip.time_of_departure + trip_time

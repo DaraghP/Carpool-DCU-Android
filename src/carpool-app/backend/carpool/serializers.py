@@ -148,12 +148,13 @@ class TripSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Trip
-        fields = ["start", "destination", "waypoints", "distance", "duration", "passengers", "available_seats", "time_of_departure"]
+        fields = ["start", "destination", "waypoints", "distance", "duration", "passengers", "available_seats", "time_of_departure", "ETA"]
 
     def create(self, data):
         trip = Trip(driver_id=data["driver_id"], 
                     time_of_departure=data["time_of_departure"],
-                    start=data["start"],
+                    ETA=data["ETA"],
+                    start=data["start"], 
                     destination=data["destination"],
                     waypoints=data["waypoints"],
                     distance=data["distance"],

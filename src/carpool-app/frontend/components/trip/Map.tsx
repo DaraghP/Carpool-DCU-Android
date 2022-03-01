@@ -1,7 +1,7 @@
 import {useAppDispatch, useAppSelector} from "../../hooks";
 import MapView, {Marker} from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import {setDistance, setDuration} from "../../reducers/trips-reducer";
+import {setDistance, setDuration, updateTripState} from "../../reducers/trips-reducer";
 import {Alert as SystemAlert} from "react-native";
 import {useEffect, useRef, useState} from "react";
 import {GOOGLE_API_KEY} from "@env";
@@ -36,6 +36,8 @@ function Map() {
     }
 
     const distanceDurationHandler = (data) => {
+        dispatch(updateTripState({"initialDurationSeconds": data.duration * 60}))
+
           if (data.distance.toFixed(1) < 1) {
               dispatch(setDistance(`${1000 * (data.distance % 1)} m`));
           } else {
