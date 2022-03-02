@@ -15,6 +15,7 @@ const initialState = {
     status: "available",
     tripRequestStatus: "",
     tripStatus: "",
+    dateCreated: "",
 }
 
 export const updateUserState = createAction<object>("user/update_state");

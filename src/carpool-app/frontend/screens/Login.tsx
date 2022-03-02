@@ -6,6 +6,7 @@ import {updateUserState, updateTripRequestStatus} from "../reducers/user-reducer
 import {useAppDispatch, useAppSelector, createLocationObj} from "../hooks";
 import {setLocations, updateTripState} from "../reducers/trips-reducer";
 import {getDatabase, get, ref, child, query, orderByChild, equalTo} from "firebase/database";
+import { createDispatchHook } from "react-redux";
 
 function LoginScreen({ navigation }) {
   const dispatch = useAppDispatch();
@@ -17,6 +18,7 @@ function LoginScreen({ navigation }) {
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
   const [errorFound, setErrorFound] = useState(false);
+//   const [isTripToDCU, setIsTripToDCU] = useState<boolean | undefined>(undefined);
 
   const db = getDatabase();
 
@@ -33,7 +35,7 @@ function LoginScreen({ navigation }) {
           'Content-Type': 'application/json',
       },
       body: JSON.stringify({username: usernameText, password: passwordText})
-    }).then(response => response.json())
+    }).then(async (response) => await response.json())
     .then(async (res) => {
         if (res.token) {
             usernameInput.current.clear();
@@ -41,6 +43,10 @@ function LoginScreen({ navigation }) {
 
             if (res.status === "passenger_busy") {
                 dispatch(updateUserState({tripRequestStatus: "accepted"}));
+                dispatch(updateTripState({role: "passenger"}))
+            }
+            if (res.status === "driver_busy") {
+                dispatch(updateTripState({role:"driver"}));
             }
 
             if (res.status === "available") {
@@ -59,8 +65,8 @@ function LoginScreen({ navigation }) {
                     })
             }
 
-            // navigates to home screen once globals.user.token updates
-            dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token}));
+            // if user.status === "available" navigates to home screen once globals.user.token updates otherwise their trip on either driver/passenger screen
+            dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token, dateCreated: res.date_joined}));
 
             if ("waypoints" in res.trip_data) {
                 Object.keys(res.trip_data["waypoints"]).map((key) => {
@@ -70,6 +76,9 @@ function LoginScreen({ navigation }) {
 
             dispatch(updateTripState({
                 ...res.trip_data,
+                ...res.passenger_route,
+            }))
+            dispatch(updateTripState({
                 locations: {
                     ...trips.locations,
                     startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"].lat, lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
@@ -78,7 +87,7 @@ function LoginScreen({ navigation }) {
                 },
                 availableSeats: res.trip_data["available_seats"],
                 timeOfDeparture: res.trip_data["time_of_departure"],
-                numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length
+                numberOfWaypoints: Object.keys(res.trip_data["waypoints"]).length,
             }))
             setErrorFound(false);
         }

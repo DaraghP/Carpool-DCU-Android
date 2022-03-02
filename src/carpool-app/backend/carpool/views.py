@@ -76,14 +76,45 @@ def login(request):
 
                 trip = {}
                 user_status = "available"
-
-                if carpool_user.current_trip is not None:
-                    trip = model_to_dict(carpool_user.current_trip)
+                passenger_route = {} 
+                if carpool_user.current_trip is not None: 
+                    trip = model_to_dict(carpool_user.current_trip) 
+                    trip["driverPhone"] = carpool_user.current_trip.driver_id.uid.phone_no
+                    trip["car"] = model_to_dict(carpool_user.current_trip.driver_id.car)
                     if carpool_user.id == carpool_user.current_trip.driver_id.uid.id:
                         user_status = "driver_busy"
                     else:
                         user_status = "passenger_busy"
+                        passenger_info = trip["passengers"][f"passenger{carpool_user.id}"]
+                        print("passenger_info", passenger_info)
 
+                        dcu_campuses = ["Dublin City University, Collins Ave Ext, Whitehall, Dublin 9", "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"]
+                        # If trip is TO DCU
+                        print(trip["start"]["name"])
+                        if trip["start"]["name"] not in dcu_campuses:
+                            passenger_loc = passenger_info["passengerStart"]
+                            route_info = [r for r in trip["route"]["route"] if r["start"] == passenger_loc][0]
+
+                            passenger_route = {
+                                "passengerDestLoc": trip["destination"]["name"],
+                                "passengerArrivalTime" : trip["ETA"].strftime("%Y-%m-%dT%H:%M"),
+                                "passengerStartLoc": route_info["start"], # '1995-12-17T03:24:00'
+                                "passengerDepartureTime": datetime.strptime(str(route_info["departure_time"]), "%H:%M %m/%d/%Y"),  
+                            }
+
+                        # If trip is FROM DCU
+                        else:
+                            passenger_loc = passenger_info["passengerDestination"]
+                            print(passenger_loc)
+                            route_info = [r for r in trip["route"]["route"] if r["destination"] == passenger_loc][0]
+                            print(route_info)
+                            passenger_route = {
+                                "passengerDestLoc": route_info["destination"],
+                                "passengerArrivalTime" : datetime.strptime(str(route_info["arrival_time"]), "%H:%M %m/%d/%Y"),
+                                "passengerStartLoc": trip["start"]["name"],
+                                "passengerDepartureTime": trip["time_of_departure"].strftime("%Y-%m-%dT%H:%M"),  
+                            }
+                            
                 return Response({
                     "id": carpool_user.id,
                     "username": carpool_user.username,
@@ -91,7 +122,9 @@ def login(request):
                     "last_name": carpool_user.last_name,
                     "status": user_status,
                     "trip_data": trip,
-                    "token": token.key
+                    "token": token.key,
+                    "passenger_route": passenger_route,
+                    "date_joined": carpool_user.date_joined.strftime("%d-%m-%Y")
                 })
             else:
                 return Response("Incorrect username or password.")
@@ -148,16 +181,16 @@ def get_profile(request):
     Gets profile of a user
     """
 
-    if request.method == "POST":
+    if request.method == "POST": 
         uid = request.data.get("uid")
         if CarpoolUser.objects.filter(id=uid).exists():
             user = CarpoolUser.objects.get(id=uid)
             return Response({
-                "username": user.username,
+                "username": user.username,             
                 "first_name": user.first_name,
+                "last_name": user.last_name, 
                 "profile_description": user.profile_description
             }, status=status.HTTP_200_OK)
-#
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -181,7 +214,7 @@ def create_driver(request):
     """
 
     if request.method == "POST":
-        is_vehicle_valid = True  # TODO: validate car details
+        is_vehicle_valid = True  
         if is_vehicle_valid is True:
             user = request.user
             name = f"{user.first_name} {user.last_name[0]}."
@@ -331,7 +364,7 @@ def get_trips(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def join_trip(request):
+def join_trip(request): 
     """
     Used by passengers to get trip data when a passengers request to a driver is accepted.
     Also used by drivers to get trip data when a passenger leaves the trip.
@@ -339,7 +372,10 @@ def join_trip(request):
     if request.method == "GET":
         if Trip.objects.filter(id=request.user.current_trip.id).exists():
             trip = Trip.objects.get(id=request.user.current_trip.id)
-            return Response({"trip_data": model_to_dict(trip)}, status=status.HTTP_200_OK)
+            trip_dict  = model_to_dict(trip)
+            trip_dict["driverPhone"] = trip.driver_id.uid.phone_no
+            trip_dict["car"] = model_to_dict(trip.driver_id.car)
+            return Response({"trip_data": trip_dict}, status=status.HTTP_200_OK)
 
         return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -371,8 +407,6 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
 
     print("NEWDICT : ", previous_waypoint_order)
 
-    #print(directions_url)
-    # TODO: Match address names using waypoint_order
     response = requests.get(directions_url)
 
     waypoint_order = response.json()["routes"][0].get("waypoint_order")
@@ -414,7 +448,6 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         route[i+1]["start"] = previous_waypoint_order[waypoint_order[i]]
         i+=1
     route[-1]["destination"] = trip.destination["name"]
-    #
     
     print("\nAFTER\n", route)
 
@@ -456,9 +489,9 @@ def add_passenger_to_trip(request):
             passenger_user = CarpoolUser.objects.get(id=request.data["passengerData"]["id"])
             if Trip.objects.filter(id=trip_id).exists():
                 trip = Trip.objects.get(id=trip_id)
-                if trip.passengers.get(f"passenger{passenger_user.id}") is None: # it was
-                    passenger_user.current_trip = trip  #
-                    passenger_user.status = "passenger_busy" # theres an error in frontend with waypoints
+                if trip.passengers.get(f"passenger{passenger_user.id}") is None:
+                    passenger_user.current_trip = trip  
+                    passenger_user.status = "passenger_busy" 
                 else:
                     return Response({"error": "passenger already in the same trip."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -472,8 +505,8 @@ def add_passenger_to_trip(request):
                 same_campus = (trip.start["name"] == passenger_start["name"]) or \
                               (trip.destination["name"] == passenger_dest["name"])
 
-                if (trip.start["name"] in dcu_campuses.values()) and (passenger_start["name"] in dcu_campuses.values()): #
-                    trip.waypoints[f"waypoint{len(trip.waypoints) + 1}"] = { #
+                if (trip.start["name"] in dcu_campuses.values()) and (passenger_start["name"] in dcu_campuses.values()): 
+                    trip.waypoints[f"waypoint{len(trip.waypoints) + 1}"] = { 
                         "name": passenger_dest["name"],
                         "passenger": f"{passenger_user.first_name} {passenger_user.last_name[0]}.",
                         "lat": passenger_dest["lat"],

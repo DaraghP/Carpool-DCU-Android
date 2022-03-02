@@ -16,7 +16,10 @@ function PassengerScreen({navigation}) {
         if (user.status === "available") {
             dispatch(resetTripState());
         }
+        console.log("test", trips.role, user.tripRequestStatus, user.tripStatus);
     }, [trips.role])
+
+
 
     return (
         <SafeAreaView style={{flex: 1}}>

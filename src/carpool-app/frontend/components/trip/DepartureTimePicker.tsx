@@ -2,7 +2,7 @@ import TripAlertModal from "./TripAlertModal";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {setTimeOfDeparture} from "../../reducers/trips-reducer";
 import {useEffect, useState} from "react";
-import {useAppDispatch, useAppSelector} from "../../hooks";
+import {useAppDispatch, useAppSelector, timedate} from "../../hooks";
 import {Button, Text} from "native-base";
 
 function DepartureTimePicker() {
@@ -36,7 +36,7 @@ function DepartureTimePicker() {
                   <Text textAlign="left" color="white" fontSize={15}>
                     Time of Departure:{"   "}
                     <Text fontWeight="bold">
-                        {!isTimeSelected ? "Now" : `${new Date(trips.timeOfDeparture).toLocaleTimeString().slice(0, 5)} ${new Date(trips.timeOfDeparture).toLocaleDateString()}`}
+                        {!isTimeSelected ? "Now" : timedate(trips.timeOfDeparture)}
                     </Text>
                   </Text>
               </Button>

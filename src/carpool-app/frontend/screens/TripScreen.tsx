@@ -43,7 +43,7 @@ import {
     HStack,
     Divider,
     IconButton,
-    CloseIcon, Box, Collapse, Container
+    CloseIcon, Box, Collapse, Container, KeyboardAvoidingView
 } from "native-base";
 import CreateGoogleAutocompleteInput from "../components/trip/CreateGoogleAutocompleteInput";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -77,6 +77,9 @@ import Collapsible from "react-native-collapsible";
 import Accordion from "react-native-collapsible/Accordion";
 import NumOfSeatsAndDepartureTimeCollapsible from "../components/trip/NumOfSeatsAndDepartureTimeCollapsible";
 import PassengerCurrentTrip from "../components/trip/PassengerCurrentTrip";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
+import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../reducers/collapsibles-reducer";
+
 
 
 function TripScreen() {
@@ -182,6 +185,8 @@ function TripScreen() {
                         if (isFirebaseTripCreated) {
                             dispatch(updateStatus("driver_busy"));  
                         }
+                        dispatch(showWaypoints(true));
+                        dispatch(showNumberOfSeatsAndTimePicker(false));
                         setPreviousTripID(trips.id)
                         dispatch(updateTripState({id: res.tripID, ETA: res.ETA}));
                         setFirebaseTripsVal({tripID: res.tripID, driverID: res.driverID, data: {trip: {}, tripRequests: {}}});
@@ -194,10 +199,10 @@ function TripScreen() {
 
     const setPassengerTimeAndLocation = () => {
         let passengerDetails = trips.passengers[`passenger${user.id}`];
-        console.log("test ", passengerDetails)
         if (isTripToDCU) { 
             let passengerLoc = passengerDetails["passengerStart"]; 
             let test = trips.route["route"].filter((obj) => obj.start !== passengerLoc);
+        
             dispatch(updateTripState({
                 "passengerDepartureTime": test["departure_time"], 
                 "passengerArrivalTime" : trips.ETA,
@@ -424,13 +429,14 @@ function TripScreen() {
             }
         }
         // else passenger has been denied their request
-    }, [user.tripRequestStatus])
-
-    useEffect(() => {
-        if ((user.status === "passenger_busy" && passengerGotInitialMapData) || user.status==="driver_busy") {
-            getOrJoinTrip();
-        }
-    }, [firebaseTripsVal.data.trip.passengers])
+    }, [user.tripRequestStatquests, 
+          ar info,
+        settings (prevent deleting account for ongoing trip), 
+            are you sure alerts (cancel/leave trip) 
+            add spinners to buttons that take a while (login/logout)
+            */
+        } // 
+        }, [firebaseTripsVal.data.trip.passengers]) 
 
     useEffect(() => {
         if (user.status === "available") {
@@ -440,22 +446,21 @@ function TripScreen() {
     }, [isTripToDCU])
 
   return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView style={styles.container}>
             {user.status === "available" &&
                 <View>
-                    <CampusDirectionSelector
-                        campusSelected={campusSelected}
-                        setCampusSelected={(value: string) => {setCampusSelected(value)}}
+                    <LocationInputGroup
                         isTripToDCU={isTripToDCU}
-                        setIsTripToDCU={(value: boolean | undefined) => {setIsTripToDCU(value)}}
+                        setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
+                        campusSelected={campusSelected}
+                        setCampusSelected={(value) => {setCampusSelected(value)}}
+                        increaseWaypoints={() => {increaseWaypoints()}}
                     />
-
-                    <LocationInputGroup isTripToDCU={isTripToDCU} campusSelected={campusSelected}/>
                 </View>
             }
 
             <View style={{flex: 1, elevation: -1, zIndex: -1}}>
-                {user.status === "available" &&
+                {/* {user.status === "available" &&
                     <>
                         {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                           <Button onPress={() => {
@@ -465,7 +470,7 @@ function TripScreen() {
                           </Button>
                         }
                     </>
-                }
+                } */}
 
                 <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
 
@@ -490,7 +495,7 @@ function TripScreen() {
                 }
 
                 {trips.role === "passenger" && user.tripRequestStatus === "waiting" ?
-                    <Box style={{ width: "100%", height: "100%", backgroundColor:"yellow", zIndex: 100, elevation: 100, alignSelf: "center", alignItems:"center", justifyContent:"center"}}>
+                    <Box style={{ width: "100%", height: "100%", backgroundColor:"#5c5c5c", zIndex: 100, elevation: 100, alignSelf: "center", alignItems:"center", justifyContent:"center"}}>
                         <PassengerCancelRequestButton setPreviousTripID={(value) => {setPreviousTripID(value)}} setHideMap={(value) => {setHideMap(value)}}/>
                     </Box>
                 : null
@@ -516,7 +521,7 @@ function TripScreen() {
                  isTripToDCU={isTripToDCU}
             />
 
-      </View>
+      </KeyboardAvoidingView>
   )
 }
 
@@ -524,6 +529,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexGrow: 1,
+    height: heightPercentageToDP("100%"),
+    width: widthPercentageToDP("100%"),
     backgroundColor: '#fff',
   },
   googlePlacesSearch: {

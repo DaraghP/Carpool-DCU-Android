@@ -29,7 +29,7 @@ SECRET_KEY = 'g+)&)x+f%!@b$y_7$jryui3ecx5bt7a1@_a+#@4(bquox_@8ih'
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True 
 
 ALLOWED_HOSTS = ["b51e-2001-bb6-6792-1a00-d582-28ad-fed5-3d80.ngrok.io", "localhost", "127.0.0.1"]
 

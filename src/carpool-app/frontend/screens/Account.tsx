@@ -50,9 +50,9 @@ function AccountScreen({ navigation }) {
 
     return (
         <View>
-            <Text>Date Created: 00/00/0000</Text>
+            <Text alignSelf="center">{'\n'} Date Created: {user.dateCreated}{'\n'}</Text>
 
-            <Button colorScheme="secondary" onPress={() => {delete_alert()}}>Delete Account</Button>
+            <Button width="80%" alignSelf="center" colorScheme="secondary" onPress={() => {delete_alert()}}>Delete Account</Button>
         </View>
     )
 }

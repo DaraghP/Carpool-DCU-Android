@@ -1,4 +1,4 @@
-import {Button, Flex, Heading, HStack, Icon, Text, VStack} from "native-base";
+import {Box, Button, Divider, Flex, Heading, HStack, Icon, Text, View, VStack} from "native-base";
 import TripAlertModal from "./TripAlertModal";
 import {SwipeablePanel} from "rn-swipeable-panel";
 import {StyleSheet, TouchableOpacity} from "react-native";
@@ -9,6 +9,9 @@ import {setTimeOfDeparture, updateTripState} from "../../reducers/trips-reducer"
 import {updateStatus, updateTripRequestStatus} from "../../reducers/user-reducer";
 import {useEffect, useState} from "react";
 import {get, getDatabase, ref} from "firebase/database";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
+import ProfileIcon from "../user/ProfileIcon";
+import Profile from "../user/Profile";
 
 function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filteredTrips, setFilteredTrips, setPreviousTripID, isTripToDCU}) {
     const db = getDatabase();
@@ -18,6 +21,7 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
     const backendURL = useAppSelector(state => state.globals.backendURL);
     const [isPanelActive, setIsPanelActive] = useState(false);
     const [tripsFound, setTripsFound] = useState<object | null>(null);
+    const [showUserModal, setShowUserModal] = useState(false);
 
     const openPanel = () => {
         setIsPanelActive(true);
@@ -87,6 +91,39 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
         })
     }
 
+    const request = (trip) => {
+
+        let passengerData = {
+          passengerID: user.id,
+          name: `${user.firstName} ${user.lastName.charAt(0)}.`,
+          startLocation: {
+              name: trips.locations.startingLocation.marker.description,
+              coords: trips.locations.startingLocation.info.coords
+          },
+          destination: {
+              name: trips.locations.destLocation.marker.description,
+              coords: trips.locations.destLocation.info.coords
+          }
+        }
+
+        storeTripRequest(trip.pk, passengerData).then((isStored) => {
+          if (!filteredTrips.has(`${trip.pk}`) && isStored) {
+              setPreviousTripID(trips.id);
+              dispatch(updateTripState({id: trip.pk, driverName: trip.driver_name}));
+
+              dispatch(updateTripRequestStatus("waiting"));
+              dispatch(updateStatus("passenger_busy"));
+          }
+
+          if (!isStored) {
+              setTripsFound({});
+          }
+
+          setShowTripAvailableModal(!isStored)
+        })
+
+    }
+
     return (
 
         (trips.role === "passenger" && user.status === "available" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered ?
@@ -117,7 +154,7 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                   }
 
                   <SwipeablePanel
-                      style={{zIndex: 2, elevation: 2}}
+                      style={{zIndex: 2, elevation: 2, maxHeight: heightPercentageToDP("85%"), minWidth: widthPercentageToDP("100%")}}
                       scrollViewProps={{style: {padding: 10, zIndex: 2, elevation: 2}}}
                       fullWidth={true}
                       openLarge={true}
@@ -140,63 +177,67 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
 
                       {tripsFound !== null &&
                           Object.keys(tripsFound).map((tripKey) => {
+                              let sameCampusColorCondition = tripsFound[tripKey].isCampusSame ? "green.800" : "orange.400";
                               return (
                                   !filteredTrips.has(tripsFound[tripKey].pk) &&
-                                  <TouchableOpacity key={v4()} style={styles.tripButton}>
-                                      <Flex direction="row" wrap="wrap">
-                                          <VStack maxWidth="75%">
-                                              <Text style={{fontWeight: "bold"}}>{tripsFound[tripKey].driver_name}</Text>
-                                              <Text>{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                                              <Text>{tripsFound[tripKey].time_of_departure}</Text>
-                                              {!isTripToDCU ?
-                                                <Text style={{...(tripsFound[tripKey].isCampusSame ? {color: "green"} : {color: "orange"})}}>From: {tripsFound[tripKey].start.name}</Text>
-                                                :
-                                                <Text>From: {tripsFound[tripKey].start.name}</Text>
-                                              }
+                                  <Box key={v4()} style={styles.tripButton} bg="light.50" rounded={20} shadow={0}>
+                                          <HStack alignItems="center">
+                                              <VStack maxWidth="75%">
+                                                  <HStack alignItems="center">
+                                                      <View marginRight={5}>
+                                                          <VStack alignItems="center">
+                                                              <Profile uid={tripsFound[tripKey].driver_id} mode="iconModal"/>
+                                                              <Text mt="1" style={{fontWeight: "bold", fontSize: heightPercentageToDP("2.5%")}}>
+                                                                  {tripsFound[tripKey].driver_name}
+                                                              </Text>
+                                                              <TouchableOpacity onPress={() => {request(tripsFound[tripKey])}} style={{alignItems: "center", marginTop: 1, backgroundColor: "black", borderRadius: 2, width: widthPercentageToDP(13)}}>
+                                                                  <Icon as={Ionicons} name="notifications" color={"white"} size={heightPercentageToDP("4%")}/>
+                                                              </TouchableOpacity>
+                                                          </VStack>
+                                                      </View>
 
-                                              {isTripToDCU ?
-                                                <Text style={{...(tripsFound[tripKey].isCampusSame ? {color: "green"} : {color: "orange"})}}>To: {tripsFound[tripKey].destination.name}</Text>
-                                                :
-                                                <Text>To: {tripsFound[tripKey].destination.name}</Text>
-                                              }
-                                              <Text>ETA: {tripsFound[tripKey].ETA}</Text>
-                                          </VStack>
-                                          <Button style={{flexDirection: "row", marginLeft: "auto"}}
-                                              onPress={() => {
-                                                  let passengerData = {
-                                                      passengerID: user.id,
-                                                      name: `${user.firstName} ${user.lastName.charAt(0)}.`,
-                                                      startLocation: {
-                                                          name: trips.locations.startingLocation.marker.description,
-                                                          coords: trips.locations.startingLocation.info.coords
-                                                      },
-                                                      destination: {
-                                                          name: trips.locations.destLocation.marker.description,
-                                                          coords: trips.locations.destLocation.info.coords
-                                                      }
-                                                  }
-                                                  
-                                                  storeTripRequest(tripsFound[tripKey].pk, passengerData).then((isStored) => {
-                                                      if (!filteredTrips.has(`${tripsFound[tripKey].pk}`) && isStored) {
-                                                          setPreviousTripID(trips.id);
-                                                          dispatch(updateTripState({id: tripsFound[tripKey].pk, driverName: tripsFound[tripKey].driver_name}));
+                                                      <VStack>
+                                                          <HStack alignItems="center" space={1}>
+                                                              <Heading size={"md"}>From</Heading>
+                                                              {!isTripToDCU &&
+                                                                  <Icon as={Ionicons} color={sameCampusColorCondition} name="ellipse" size={heightPercentageToDP("3%")}/>
+                                                              }
+                                                          </HStack>
+                                                          {!isTripToDCU ?
+                                                            <Text>
+                                                                {tripsFound[tripKey].start.name}
+                                                            </Text>
+                                                            :
+                                                            <Text>{tripsFound[tripKey].start.name}</Text>
+                                                          }
+                                                          <HStack alignItems="center" space={1} mt={1}>
+                                                              <Heading size={"md"}>To</Heading>
+                                                              {isTripToDCU &&
+                                                                  <Icon as={Ionicons} color={tripsFound[tripKey].isCampusSame ? "green.800" : "orange.400"} name="ellipse" size={heightPercentageToDP("3%")}/>
+                                                              }
+                                                          </HStack>
+                                                          {isTripToDCU ?
+                                                            <Text>
+                                                                {tripsFound[tripKey].destination.name}
+                                                            </Text>
+                                                            :
+                                                            <Text>To: {tripsFound[tripKey].destination.name}</Text>
+                                                          }
+                                                      </VStack>
 
-                                                          dispatch(updateTripRequestStatus("waiting"));
-                                                          dispatch(updateStatus("passenger_busy"));
-                                                      }
 
-                                                      if (!isStored) {
-                                                        setTripsFound({});
-                                                      }
+                                                      {/*<Text fontWeight="bold">{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>*/}
+                                                  </HStack>
 
-                                                      setShowTripAvailableModal(!isStored)
-                                                  })
 
-                                          }}>
-                                            Request
-                                          </Button>
-                                      </Flex>
-                                  </TouchableOpacity>
+                                                  <Text fontWeight="bold">{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
+                                                  <Text fontWeight="bold">Departing at {tripsFound[tripKey].time_of_departure}</Text>
+                                                  <Text fontWeight="bold">ETA at {tripsFound[tripKey].ETA}</Text>
+                                              </VStack>
+
+                                          </HStack>
+
+                                  </Box>
                               );
                           }
                       )}

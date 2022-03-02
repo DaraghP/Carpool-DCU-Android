@@ -3,14 +3,16 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Collapsible from "react-native-collapsible";
 import NumberOfSeatsSelector from "./NumberOfSeatsSelector";
 import DepartureTimePicker from "./DepartureTimePicker";
-import {useAppSelector} from "../../hooks";
-import {useState} from "react";
+import {useAppDispatch, useAppSelector} from "../../hooks";
+import {useEffect, useState} from "react";
+import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../../reducers/collapsibles-reducer";
 
 function NumOfSeatsAndDepartureTimeCollapsible() {
+    const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user);
     const trips = useAppSelector(state => state.trips);
-
-    const [showDepartureAndTimePickerCollapsible, setShowDepartureAndTimePickerCollapsible] = useState(true);
+    const showDepartureAndTimePickerCollapsible = useAppSelector(state => state.collapsibles.showNumberOfSeatsAndTimePicker);
+    const showWaypointsCollapsible = useAppSelector(state => state.collapsibles.showWaypoints);
 
     return (
         (trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered ?
@@ -18,7 +20,7 @@ function NumOfSeatsAndDepartureTimeCollapsible() {
                     <Button
                         style={{backgroundColor: "white"}}
                         onPress={() => {
-                            setShowDepartureAndTimePickerCollapsible(!showDepartureAndTimePickerCollapsible)
+                            dispatch(showNumberOfSeatsAndTimePicker(!showDepartureAndTimePickerCollapsible))
                         }}
                     >
                         <HStack space={3} alignItems="center">

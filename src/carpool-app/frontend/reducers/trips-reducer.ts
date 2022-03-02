@@ -28,6 +28,8 @@ const initialState = {
     availableSeats: 1,
     route: {},
     ETA: "",
+    driverPhone: "",
+    car: {}
 }
 
 

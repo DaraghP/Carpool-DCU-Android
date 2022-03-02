@@ -36,6 +36,27 @@ export const createLocationObj = (key: string, type: string, typeTitle: string, 
     )
 }
 
+export const timedate = (date) => {
+    let tempDate = new Date(date);
+    let day = "";
+    let currentDate = new Date()
+    let tomorrow = new Date()
+    tomorrow.setDate(currentDate.getDate() + 1) 
+    
+    if (tempDate.getDate() === currentDate.getDate()) {
+        day = "Today"
+    } 
+    if (tomorrow.getDate() === tempDate.getDate()) {
+        day = "Tomorrow"
+    }
+    if (day !== "Today" && day !== "Tomorrow") {
+        day = tempDate.toLocaleDateString();
+    }
+
+    return `${day} ${new Date(tempDate).toLocaleTimeString().slice(0, 5)}` 
+} 
+
+
 // firebase
 export function createFirebaseTrip(status, availableSeats, tripID, driverID, driverName) {
 

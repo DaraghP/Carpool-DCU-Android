@@ -94,28 +94,7 @@ function HomeScreen({ navigation }) {
 
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false} stickyHeaderIndices={[0]} keyboardShouldPersistTaps="always">
-            <Profile uid={user.id}/>
-            {/*<Box padding="5" bg="muted.100" borderBottomWidth={1} borderBottomColor={"muted.500"}>*/}
-            {/*    <HStack space={3} alignItems="center">*/}
-            {/*        <TouchableOpacity onPress={() => {setShowUserModal(true)}}>*/}
-            {/*            <Avatar bg="muted.800" size="md">*/}
-            {/*                <Icon color="white" as={Ionicons} name="person-outline"/>*/}
-            {/*                <Avatar.Badge borderColor="muted.600" bg="green.300"/>*/}
-            {/*            </Avatar>*/}
-            {/*        </TouchableOpacity>*/}
-            {/*        <VStack paddingRight={5} marginRight={5}>*/}
-            {/*            <HStack space={1}>*/}
-            {/*                <Heading size="md">{user.username}</Heading>*/}
-
-            {/*                <TouchableOpacity onPress={() => {setShowUserModal(true)}}>*/}
-            {/*                    <Icon color="muted.500" size={6} as={Ionicons} name="create-outline"/>*/}
-            {/*                </TouchableOpacity>*/}
-            {/*            </HStack>*/}
-            {/*            <Text color="muted.600" paddingRight={5} numberOfLines={2}>{user.description !== "" ? user.description : "Tell us about yourself..."}</Text>*/}
-            {/*        </VStack>*/}
-            {/*    </HStack>*/}
-
-            {/*</Box>*/}
+            <Profile uid={user.id} mode="bar"/>
 
             <VStack space={0} zIndex={-1}>
 

@@ -2,17 +2,20 @@ import {View} from "react-native";
 import {Button, Heading, Text} from "native-base";
 import {v4} from "uuid";
 import {getDatabase, get, ref, remove, update} from "firebase/database";
-import {removeFirebaseTrip, useAppDispatch, useAppSelector} from "../../hooks";
-import {resetTripState} from "../../reducers/trips-reducer";
+import {removeFirebaseTrip, useAppDispatch, useAppSelector, timedate} from "../../hooks";
+import {resetTripState, setDistance} from "../../reducers/trips-reducer";
 import {updateStatus} from "../../reducers/user-reducer";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
+import TripAlertModal from "./TripAlertModal"
 
-function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) {
+function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) { 
     const db = getDatabase();
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
     const user = useAppSelector(state => state.user);
     const backendURL = useAppSelector(state => state.globals.backendURL);
+
+    const [isCancelTripPressed, setIsCancelTripPressed] = useState(false);
 
     // cancel
     const cancelTrip = () => {
@@ -66,10 +69,6 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
     //     console.log(trips.ETA)
     // }, [trips.initialETA, trips.ETA])
 
-    const timedate = (date) => { 
-        return `${new Date(date).toLocaleTimeString().slice(0, 5)} ${new Date(date).toLocaleDateString()}` 
-    } //
-
     return (
              <View style={{padding: 10}}>
                   <Heading mb={2}>Current Trip</Heading>
@@ -78,11 +77,12 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                   <Text>To: {trips.locations.destLocation.marker.description}</Text>
                   <Text>Departure Time:</Text>
                   <Text style={{fontWeight: "bold"}}>{timedate(trips.timeOfDeparture)}</Text>
-
-                  <Text style={{fontWeight: "bold"}}>ETA: {timedate(trips.ETA)}</Text>
+                  <Text>ETA:</Text>
+                  <Text style={{fontWeight: "bold"}}> {new Date(trips.ETA).toLocaleTimeString().slice(0, 5)}</Text>
+                  
                   <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
                       return (<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>)
-                    })// 
+                    })
                   }
                   </Text>
 
@@ -116,10 +116,28 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                          }}>
                              START Trip
                          </Button>
-                         <Button colorScheme="red" onPress={() => {cancelTrip()}}>Cancel Trip</Button>
+                         <Button colorScheme="red" onPress={() => {setIsCancelTripPressed(true)}}>Cancel Trip</Button>
                      </>
-
                  }
+                    
+                    {isCancelTripPressed &&
+                        <TripAlertModal
+                            headerText="Are you sure you want to Cancel Trip?"
+                            bodyText="This action is irreversable."
+                            btnAction={{
+                                action: () => {
+                                    cancelTrip()
+                                },
+                                text: "Yes"
+                            }}
+                            otherBtnAction={{
+                                action: () => {
+                                    setIsCancelTripPressed(false)
+                                },
+                                text: "No"
+                            }}
+                        />
+                    }
 
              </View>
     )

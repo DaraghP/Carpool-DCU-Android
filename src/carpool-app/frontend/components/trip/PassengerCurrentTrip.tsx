@@ -2,10 +2,11 @@ import {Heading, Text, Button, HStack, VStack} from "native-base";
 import {View} from "react-native";
 import {updateUserState} from "../../reducers/user-reducer";
 import {resetTripState} from "../../reducers/trips-reducer";
-import {removeFirebaseTrip, useAppDispatch, useAppSelector} from "../../hooks";
+import {removeFirebaseTrip, useAppDispatch, useAppSelector, timedate} from "../../hooks";
 import {get, getDatabase, ref, remove, update} from "firebase/database";
 import {v4} from "uuid";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
+import TripAlertModal from "./TripAlertModal";
 
 
 function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCampusSelected, isTripDeparted}) {
@@ -14,6 +15,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
     const backendURL = useAppSelector(state => state.globals.backendURL);
     const user = useAppSelector(state => state.user);
     const trips = useAppSelector(state => state.trips);
+    const [isLeaveTripPressed, setIsLeaveTripPressed] = useState(false);
 
 
     const passengerCancelTrip = async (availableSeats) => {
@@ -21,6 +23,34 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
         await remove(ref(db, `/trips/${trips.id}/passengers/${user.id}`));
         await update(ref(db, `/trips/${trips.id}`), {["/availableSeats"]: availableSeats})
     }
+
+    const leaveTrip = () => {
+        fetch(`${backendURL}/passenger_leave_trip`, {
+            method: "GET",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${user.token}`
+            },
+        }).then(response => response.json())
+            .then(res => {
+                if (!("errorType" in res)) {
+                    dispatch(updateUserState({
+                        status: "available",
+                        tripStatus: "",
+                        tripRequestStatus: ""
+                    }));
+                    passengerCancelTrip(res.available_seats).then(() => {
+                        dispatch(resetTripState())
+                        setIsTripToDCU(undefined);
+                        setCampusSelected("");
+                    })
+                } else {
+                    console.log(res.errorType, res.errorMessage);
+                }
+            })
+    }
+    
 
 
     useEffect(() => {
@@ -62,6 +92,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
 
     }, [isTripDeparted])
 
+
     return (
         (trips.role === "passenger" && user.tripRequestStatus === "" && user.tripStatus === "in_trip" && !filteredTrips.has(trips.id) ?
             <View>
@@ -73,7 +104,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                     <VStack>
                         <Text>Departure Time:</Text>
                         <Text
-                            style={{fontWeight: "bold"}}>{new Date(trips.passengerDepartureTime).toLocaleTimeString().slice(0, 5)} {new Date(trips.passengerDepartureTime).toLocaleDateString()}</Text>
+                            style={{fontWeight: "bold"}}>{timedate(trips.passengerDepartureTime)}</Text>
                     </VStack>
                     
                     <VStack style={{
@@ -84,7 +115,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                     }}>
 
                         <Text>Arrival Time:</Text>
-                        <Text>{new Date(trips.passengerArrivalTime).toLocaleTimeString().slice(0, 5)}</Text>
+                        <Text>{timedate(trips.passengerArrivalTime)}</Text>
                     </VStack>
                 </HStack>
 
@@ -95,39 +126,39 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                 </Text>
 
                 <Text>{trips.availableSeats} Empty seats</Text>
+                <Text>Driver's Phone No: {trips.driverPhone}</Text>
+                <Text>Driver's Car: {trips.car["colour"]} {trips.car["make"]} {trips.car["model"]}</Text>
 
                 {!isTripDeparted ?
                     <Button onPress={() => {
-                        fetch(`${backendURL}/passenger_leave_trip`, {
-                            method: "GET",
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                                'Authorization': `Token ${user.token}`
-                            },
-                        }).then(response => response.json())
-                            .then(res => {
-                                if (!("errorType" in res)) {
-                                    dispatch(updateUserState({
-                                        status: "available",
-                                        tripStatus: "",
-                                        tripRequestStatus: ""
-                                    }));
-                                    passengerCancelTrip(res.available_seats).then(() => {
-                                        dispatch(resetTripState())
-                                        setIsTripToDCU(undefined);
-                                        setCampusSelected("");
-                                    })
-                                } else {
-                                    console.log(res.errorType, res.errorMessage);
-                                }
-                            })
-                    }}>
+                        setIsLeaveTripPressed(true);
+                        }}
+                    >
                         Cancel Trip
                     </Button>
                     :
                     <Text>Driver has departed</Text>
                 }
+
+                {isLeaveTripPressed &&
+                    <TripAlertModal
+                        headerText="Are you sure you want to leave this trip?"
+                        bodyText="Click YES to leave trip."
+                        btnAction={{
+                            action: () => {
+                                leaveTrip()
+                            },
+                            text: "Yes"
+                        }}
+                        otherBtnAction={{
+                            action: () => {
+                                setIsLeaveTripPressed(false)
+                            },
+                            text: "No"
+                        }}
+                    />
+                }
+
             </View>
         : null)
 

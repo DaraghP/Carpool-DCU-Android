@@ -1,6 +1,7 @@
-import {Button, Modal, Text} from "native-base";
+import {Button, Modal, Text, HStack} from "native-base";
 
-function TripAlertModal({headerText, bodyText, btnAction}) {
+function TripAlertModal({headerText, bodyText, btnAction, otherBtnAction = false}) {
+
     return (
         <Modal isOpen={true}>
             <Modal.Content>
@@ -11,7 +12,12 @@ function TripAlertModal({headerText, bodyText, btnAction}) {
                     <Text>{bodyText}</Text>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button onPress={() => {btnAction.action();}}>{btnAction.text}</Button>
+                    <HStack space={2}>
+                        <Button minWidth="20%" onPress={() => {btnAction.action();}}>{btnAction.text}</Button>
+                        {otherBtnAction &&
+                            <Button minWidth="20%" onPress={() => {otherBtnAction.action();}}>{otherBtnAction.text}</Button>                        
+                        }
+                    </HStack>
                 </Modal.Footer>
             </Modal.Content>
         </Modal>
