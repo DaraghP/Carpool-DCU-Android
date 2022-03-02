@@ -9,12 +9,15 @@ import {GOOGLE_API_KEY} from "@env";
 // @ts-ignore
 import getDirections from "react-native-google-maps-directions";
 import MapMarkers from "./MapMarkers";
+import {heightPercentageToDP} from "react-native-responsive-screen";
 
 function Map() {
     const dispatch = useAppDispatch();
+    const user = useAppSelector(state => state.user)
     const trips = useAppSelector(state => state.trips);
     const mapRef = useRef(null);
     const [isRouteTapped, setIsRouteTapped] = useState(false);
+    const collapsibles = useAppSelector(state => state.collapsibles);
 
     const onMapReadyHandler = () => {
         if (mapRef.current) {
@@ -23,7 +26,7 @@ function Map() {
                 if (trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) {
                     mapRef.current.fitToSuppliedMarkers(markers, {animated: true});
                 }
-            }, 500)
+            }, 1000)
         }
     }
 
@@ -41,7 +44,7 @@ function Map() {
           if (data.distance.toFixed(1) < 1) {
               dispatch(setDistance(`${1000 * (data.distance % 1)} m`));
           } else {
-              dispatch(setDistance(`${data.distance.toFixed(1)} km`));
+              dispatch(setDistance(`${parseFloat(data.distance).toFixed(1)} km`));
           }
           let hoursDecimal = (data.duration / 60);
           let hours = Math.floor(hoursDecimal);
@@ -55,6 +58,10 @@ function Map() {
               dispatch(setDuration(`${hours} hr ${minutes.toFixed(0)} min`));
           }
     }
+
+    useEffect(() => {
+        console.log(user.username, trips.role, user.tripRequestStatus)
+    }, [trips])
 
     const onPressHandler = () => {
           if (trips.role === "driver") {
@@ -111,7 +118,7 @@ function Map() {
     return (
           <MapView
               ref={mapRef}
-              style={{flex: 1}}
+              style={{flex: 1, minHeight: heightPercentageToDP(0.5)}}
               region={{
                   latitude: trips.locations.startingLocation.info.coords.lat,
                   longitude: trips.locations.startingLocation.info.coords.lng,

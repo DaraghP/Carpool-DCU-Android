@@ -10,6 +10,7 @@ urlpatterns = [
     path("delete", views.delete_account, name="delete-account"),
     path("get_profile", views.get_profile, name="get-profile"),
     path("set_profile_description", views.set_profile_description, name="set-profile-description"),
+    path("update_phone", views.update_phone, name="update-phone"),
     path("get_driver", views.get_driver, name="get-driver"),
     path("create_driver", views.create_driver, name="create-driver"),
     path("create_passenger", views.create_passenger, name="create-passenger"),

@@ -17,14 +17,14 @@ class CarpoolUser(AbstractUser):
 
 class Driver(models.Model):
     id = models.AutoField(primary_key=True)
-    uid = models.ForeignKey("CarpoolUser", on_delete=models.CASCADE)
+    uid = models.ForeignKey("CarpoolUser", on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=150)
     car = models.ForeignKey("Car", null=True, on_delete=models.CASCADE)
 
 
 class Passenger(models.Model):
     id = models.AutoField(primary_key=True)
-    uid = models.ForeignKey("CarpoolUser", on_delete=models.CASCADE)
+    uid = models.ForeignKey("CarpoolUser", on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=150)
 
 

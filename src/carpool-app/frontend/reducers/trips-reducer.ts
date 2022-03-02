@@ -18,6 +18,7 @@ const locations = {
 const initialState = {
     role: "",
     driverName: "",
+    driverID: 0,
     locations: locations,
     markerRefs: {},
     numberOfWaypoints: 0,
@@ -74,6 +75,8 @@ export const TripsSlice = createSlice({
                 duration: "",
                 timeOfDeparture: "",
                 availableSeats: 1,
+                route: {},
+                ETA: ""
             };
 
         },

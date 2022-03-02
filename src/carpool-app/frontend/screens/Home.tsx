@@ -26,6 +26,8 @@ import {useAppDispatch, useAppSelector} from "../hooks";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useEffect, useState} from "react";
 import Profile from "../components/user/Profile";
+import ProfileModal from "../components/user/ProfileModal";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 
 function HomeScreen({ navigation }) {
     const dispatch = useAppDispatch();
@@ -34,6 +36,7 @@ function HomeScreen({ navigation }) {
     const [showUserModal, setShowUserModal] = useState(false);
     const [editDescription, setEditDescription] = useState(false);
     const [userDescriptionText, setUserDescriptionText] = useState("");
+    const [profileData, setProfileData] = useState<object>({username: "", profile_description: "", first_name: ""});
 
     const getProfileDescription = (uid) => {
         fetch(`${backendURL}/get_profile_description`, {
@@ -62,12 +65,12 @@ function HomeScreen({ navigation }) {
             },
             body: JSON.stringify({profileDescription: profileDescription})
         })
-        .then(response => {return {status: response.status}})
+        .then(response => response.json().then(data => ({status: response.status, data: data})))
         .then((res) => {
             if (res.status === 200) {
                 dispatch(updateUserDescription(profileDescription));
-                console.log(res.status, profileDescription)
             }
+            setProfileData(res.data);
         })
     }
 
@@ -94,7 +97,7 @@ function HomeScreen({ navigation }) {
 
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false} stickyHeaderIndices={[0]} keyboardShouldPersistTaps="always">
-            <Profile uid={user.id} mode="bar"/>
+            <Profile uid={user.id} mode="bar" showPhoneNumber={true}/>
 
             <VStack space={0} zIndex={-1}>
 
@@ -106,7 +109,7 @@ function HomeScreen({ navigation }) {
 
                     <HStack space={1} alignItems="center">
                         <VStack width={"50%"}>
-                            <Heading alignSelf="center" size="md" letterSpacing={1.5}>Sharing a ride?</Heading>
+                            <Heading alignSelf="center" size="md" letterSpacing={widthPercentageToDP(0.3)}>Sharing a ride?</Heading>
                             <Divider mt="1"/>
                             <TouchableOpacity onPress={() => {
                                 dispatch(updateRole("driver"));
@@ -115,13 +118,13 @@ function HomeScreen({ navigation }) {
 
                                 <Box bg="muted.800" mt="1" paddingY={200} alignItems="center">
                                     <Ionicons name="car-outline" size={80} color="white"/>
-                                    <Heading style={{letterSpacing: 2.5}} color="white" textAlign="center">Driver</Heading>
+                                    <Heading style={{letterSpacing: widthPercentageToDP(0.5)}} color="white" textAlign="center">Driver</Heading>
                                 </Box>
                             </TouchableOpacity>
                         </VStack>
-                        {/* alright */}
+
                         <VStack width={"50%"}>
-                            <Heading size="md" alignSelf="center" letterSpacing={1.2}>Looking to ride?</Heading>
+                            <Heading size="md" alignSelf="center" letterSpacing={widthPercentageToDP(0.1)}>Looking to ride?</Heading>
                             <Divider mt="1"/>
                             <TouchableOpacity onPress={() => {
                                 createPassenger();
@@ -210,6 +213,8 @@ const styles = StyleSheet.create({
     container: {
       flex: 1,
       flexGrow: 1,
+      height: heightPercentageToDP(100),
+      width: widthPercentageToDP(100),
       marginTop: StatusBar.currentHeight
     }
   });

@@ -6,6 +6,7 @@ import {Alert, TouchableOpacity, TouchableWithoutFeedback} from "react-native";
 import {Button, Center, Text} from "native-base";
 import { useAppDispatch, useAppSelector, createLocationObj } from "../../hooks";
 import {GOOGLE_API_KEY} from "@env";
+import {heightPercentageToDP} from "react-native-responsive-screen";
 
 
 const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a waypoint..."}) => {
@@ -105,6 +106,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
         <GooglePlacesAutocomplete
             key={locationObj.key}
             ref={markerRef}
+            style={{maxHeight: heightPercentageToDP(20)}}
             placeholder={placeholder}
             listViewDisplayed={markerRef.current?.getAddressText() !== ""}
             renderRightButton={() =>

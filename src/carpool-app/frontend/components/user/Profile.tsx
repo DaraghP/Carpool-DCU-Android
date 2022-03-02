@@ -1,4 +1,4 @@
-import {Avatar, Box, Divider, Heading, HStack, Icon, Modal, Text, TextArea, VStack} from "native-base";
+import {Avatar, Box, Button, Divider, Heading, HStack, Icon, Modal, Text, TextArea, VStack} from "native-base";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {TouchableOpacity, TouchableWithoutFeedback, View} from "react-native";
 import {useEffect, useState} from "react";
@@ -8,7 +8,7 @@ import ProfileIcon from "./ProfileIcon";
 import ProfileModal from "./ProfileModal";
 import ProfileBar from "./ProfileBar";
 
-function Profile({uid, mode, style = {}}) {
+function Profile({uid, mode, logoutBtn = false,  showPhoneNumber = false, style = {}}) {
     const dispatch = useAppDispatch(); 
     const user = useAppSelector(state => state.user);
     const backendURL = useAppSelector(state => state.globals.backendURL);
@@ -17,6 +17,7 @@ function Profile({uid, mode, style = {}}) {
     const [showUserModal, setShowUserModal] = useState(false);
     const [editDescription, setEditDescription] = useState(false);
     const [userDescriptionText, setUserDescriptionText] = useState("");
+    const [isLoaded, setIsLoaded] = useState(false);
 
     const getProfile = (uid) => {
         fetch(`${backendURL}/get_profile`, {
@@ -59,7 +60,10 @@ function Profile({uid, mode, style = {}}) {
     }
 
     useEffect(() => {
-        getProfile(uid);
+        if (!isLoaded) {
+            getProfile(uid);
+            setIsLoaded(true);
+        }
     }, [])
 
     return (
@@ -69,6 +73,7 @@ function Profile({uid, mode, style = {}}) {
                     <ProfileIcon setShowUserModal={(value) => {setShowUserModal(value)}} style={style}/>
                     <ProfileModal
                         uid={uid}
+                        showPhoneNumber={showPhoneNumber}
                         setShowUserModal={(value) => {setShowUserModal(value)}}
                         setEditDescription={(value) => {setEditDescription(value)}}
                         setProfileDescription={(value) => {setProfileDescription(value)}}
@@ -83,9 +88,10 @@ function Profile({uid, mode, style = {}}) {
 
             {mode === "bar" &&
                 <>
-                    <ProfileBar profileData={profileData} showUserModal={showUserModal} setShowUserModal={(value) => {setShowUserModal(value)}}/>
+                    <ProfileBar logoutBtn={logoutBtn} profileData={profileData} showUserModal={showUserModal} setShowUserModal={(value) => {setShowUserModal(value)}}/>
                     <ProfileModal
                         uid={uid}
+                        showPhoneNumber={showPhoneNumber}
                         setShowUserModal={(value) => {setShowUserModal(value)}}
                         setEditDescription={(value) => {setEditDescription(value)}}
                         setProfileDescription={(value) => {setProfileDescription(value)}}

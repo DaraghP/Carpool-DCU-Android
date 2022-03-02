@@ -27,7 +27,7 @@ export default function Index() {
   const [showStatusDriverBusyAlert, setShowStatusDriverBusyAlert] = useState(false);
 
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://b51e-2001-bb6-6792-1a00-d582-28ad-fed5-3d80.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://e0ba-46-7-17-96.ngrok.io"}));
   }, [])
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function Index() {
                           // alert you have an ongoing trip as driver
                           setShowStatusDriverBusyAlert(true);
                         }
-                        if (user.status === "passenger_busy") {
+                        else if (user.status === "passenger_busy") {
                           dispatch(updateRole("passenger"));
                           navigation.navigate("Passenger")
                         }
@@ -153,10 +153,44 @@ export default function Index() {
                               setShowStatusAvailableFromPassengerAlert(true);
                           }
                           else {
-                            dispatch(updateRole("Driver"));
-                            navigation.navigate("Driver")
+                            dispatch(updateRole("passenger"));
+                            navigation.navigate("Passenger")
                           }
                         }
+
+                        // console.log("Driver", routeCondition, routeName);
+                        if (routeName === "Passenger") {
+                          if (user.status === "available") {
+                              setTabAlert(true)
+                              // warn that changes may be lost
+                              setShowStatusAvailableFromPassengerAlert(true);
+                          }
+
+                          if (user.status === "passenger_busy") {
+                            if (routeName !== "Passenger") {
+                              setTabAlert(true)
+
+                              // alert you have an ongoing trip as driver
+                              setShowStatusPassengerBusyAlert(true);
+                              navigation.navigate("Passenger")
+                            }
+                          }
+                        }
+                        else {
+                           navigation.navigate("Driver")
+                        }
+                      }
+                    })}
+                  />
+                }
+
+
+                <Tab.Screen name="Settings" component={SettingsScreen}
+                  options={
+                    {headerShown: false, tabBarIcon: () => {return <Ionicons name="settings-outline" size={25} color={"grey"}/>;}}
+                  }
+                />
+              </>
               :
               <>
                 <Tab.Screen name="Login" component={LoginScreen}

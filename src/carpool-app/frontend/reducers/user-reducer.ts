@@ -9,13 +9,13 @@ const initialState = {
     username: "",
     firstName: "",
     lastName: "",
-    picture: "",
     description: "",
     token: "",
     status: "available",
     tripRequestStatus: "",
     tripStatus: "",
     dateCreated: "",
+    phoneNumber: "",
 }
 
 export const updateUserState = createAction<object>("user/update_state");

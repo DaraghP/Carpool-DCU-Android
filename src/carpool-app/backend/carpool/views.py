@@ -16,9 +16,8 @@ from .serializers import *
 from .models import *
 from django.conf import settings
 import urllib
+import phonenumbers
 
-# Create your views here.
-#
 
 """
 Carpool API
@@ -45,7 +44,8 @@ def register(request):
                 temp_user = carpool_user.create(request.data)
                 token = Token.objects.create(user=temp_user)
 
-                user_data = {"id": temp_user.id, "username": temp_user.username, "token": token.key}
+                user_data = {"id": temp_user.id, "username": temp_user.username,
+                             "token": token.key, "phone_no": temp_user.phone_no}
                 django_login(request, temp_user)
 
                 return Response(user_data, status=status.HTTP_201_CREATED)
@@ -81,33 +81,29 @@ def login(request):
                     trip = model_to_dict(carpool_user.current_trip) 
                     trip["driverPhone"] = carpool_user.current_trip.driver_id.uid.phone_no
                     trip["car"] = model_to_dict(carpool_user.current_trip.driver_id.car)
+                    trip["driverName"] = f"{carpool_user.current_trip.driver_id.uid.first_name} {carpool_user.current_trip.driver_id.uid.last_name[0]}."
                     if carpool_user.id == carpool_user.current_trip.driver_id.uid.id:
                         user_status = "driver_busy"
                     else:
                         user_status = "passenger_busy"
                         passenger_info = trip["passengers"][f"passenger{carpool_user.id}"]
-                        print("passenger_info", passenger_info)
 
                         dcu_campuses = ["Dublin City University, Collins Ave Ext, Whitehall, Dublin 9", "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"]
                         # If trip is TO DCU
-                        print(trip["start"]["name"])
                         if trip["start"]["name"] not in dcu_campuses:
                             passenger_loc = passenger_info["passengerStart"]
                             route_info = [r for r in trip["route"]["route"] if r["start"] == passenger_loc][0]
-
                             passenger_route = {
                                 "passengerDestLoc": trip["destination"]["name"],
                                 "passengerArrivalTime" : trip["ETA"].strftime("%Y-%m-%dT%H:%M"),
-                                "passengerStartLoc": route_info["start"], # '1995-12-17T03:24:00'
-                                "passengerDepartureTime": datetime.strptime(str(route_info["departure_time"]), "%H:%M %m/%d/%Y"),  
+                                "passengerStartLoc": route_info["start"],
+                                "passengerDepartureTime": datetime.strptime(str(route_info["departure_time"]), "%H:%M %m/%d/%Y"),
                             }
 
                         # If trip is FROM DCU
                         else:
                             passenger_loc = passenger_info["passengerDestination"]
-                            print(passenger_loc)
                             route_info = [r for r in trip["route"]["route"] if r["destination"] == passenger_loc][0]
-                            print(route_info)
                             passenger_route = {
                                 "passengerDestLoc": route_info["destination"],
                                 "passengerArrivalTime" : datetime.strptime(str(route_info["arrival_time"]), "%H:%M %m/%d/%Y"),
@@ -120,6 +116,7 @@ def login(request):
                     "username": carpool_user.username,
                     "first_name": carpool_user.first_name,
                     "last_name": carpool_user.last_name,
+                    "phone_no": carpool_user.phone_no,
                     "status": user_status,
                     "trip_data": trip,
                     "token": token.key,
@@ -186,12 +183,34 @@ def get_profile(request):
         if CarpoolUser.objects.filter(id=uid).exists():
             user = CarpoolUser.objects.get(id=uid)
             return Response({
-                "username": user.username,             
+                "username": user.username,
                 "first_name": user.first_name,
-                "last_name": user.last_name, 
+                "last_name": user.last_name,
+                "phone_number": user.phone_no,
                 "profile_description": user.profile_description
             }, status=status.HTTP_200_OK)
     return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_phone(request):
+    user = CarpoolUser.objects.get(id=request.user.id)
+    new_phone_no = str(request.data.get("phoneNumber"))
+
+    try:
+        phone_number = phonenumbers.parse(new_phone_no, "IE")
+        number_valid = phonenumbers.is_valid_number(phone_number)
+    except phonenumbers.phonenumberutil.NumberParseException:
+        number_valid = False
+
+    if number_valid:
+        user.phone_no = new_phone_no
+        user.save()
+        return Response({"status": "success", "phone_number": new_phone_no}, status=status.HTTP_200_OK)
+    else:
+        return Response({"error": "phone"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @api_view(["GET"])
@@ -201,7 +220,6 @@ def get_driver(request):
     Gets driver, if they exist, their details are sent back in the response,
     otherwise it returns status 404.
     """
-    # may need to return car information in future
     return Response({"driver_exists": Driver.objects.filter(uid=request.user.id).exists()}, status=status.HTTP_200_OK)
 
 
@@ -372,10 +390,40 @@ def join_trip(request):
     if request.method == "GET":
         if Trip.objects.filter(id=request.user.current_trip.id).exists():
             trip = Trip.objects.get(id=request.user.current_trip.id)
-            trip_dict  = model_to_dict(trip)
+            trip_dict = model_to_dict(trip)
             trip_dict["driverPhone"] = trip.driver_id.uid.phone_no
             trip_dict["car"] = model_to_dict(trip.driver_id.car)
-            return Response({"trip_data": trip_dict}, status=status.HTTP_200_OK)
+            trip_dict["driverName"] = f"{trip.driver_id.uid.first_name} {trip.driver_id.uid.last_name}."
+            passenger_route = {}
+            # If passenger in a trip, gets passenger_route info
+            if request.user.status == "passenger_busy":
+                passenger_info = trip_dict["passengers"][f"passenger{request.user.id}"]
+                dcu_campuses = ["Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
+                                "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"]
+                # If trip is TO DCU
+                if trip_dict["start"]["name"] not in dcu_campuses:
+                    passenger_loc = passenger_info["passengerStart"]
+                    route_info = [r for r in trip_dict["route"]["route"] if r["start"] == passenger_loc][0]
+                    passenger_route = {
+                        "passengerDestLoc": trip_dict["destination"]["name"],
+                        "passengerArrivalTime": trip_dict["ETA"].strftime("%Y-%m-%dT%H:%M"),
+                        "passengerStartLoc": route_info["start"],
+                        "passengerDepartureTime": datetime.strptime(str(route_info["departure_time"]),
+                                                                    "%H:%M %m/%d/%Y"),
+                    }
+
+                # If trip is FROM DCU
+                else:
+                    passenger_loc = passenger_info["passengerDestination"]
+                    route_info = [r for r in trip_dict["route"]["route"] if r["destination"] == passenger_loc][0]
+                    passenger_route = {
+                        "passengerDestLoc": route_info["destination"],
+                        "passengerArrivalTime": datetime.strptime(str(route_info["arrival_time"]), "%H:%M %m/%d/%Y"),
+                        "passengerStartLoc": trip_dict["start"]["name"],
+                        "passengerDepartureTime": trip_dict["time_of_departure"].strftime("%Y-%m-%dT%H:%M"),
+                    }
+
+            return Response({"trip_data": trip_dict, "passenger_route": passenger_route}, status=status.HTTP_200_OK)
 
         return Response({"error": "Trip no longer exists."}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -461,7 +509,7 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
     if str(distance_calculation)[-1] == "0":
         total_distance = str(distance_calculation)[:-2] + " km"
     else:
-        total_distance = str(distance_calculation) + " km"
+        total_distance = str(round(distance_calculation, 1)) + " km"
 
     trip.distance = total_distance
     trip.duration = total_duration
@@ -547,7 +595,6 @@ def end_trip(request):
             people = CarpoolUser.objects.filter(current_trip=trip_id)
 
             ids_list = []
-            # trip = Trip.objects.get(id=trip_id)
             for user in people:
                 ids_list.append(user.id)
                 user.status = "available"
@@ -573,7 +620,7 @@ def passenger_leave_trip(request):
             locations_count = {}
 
             for key, passenger in trip.passengers.items():
-                # to prevent removing leaving passengers waypoints if other passengers have it as well
+                # prevents removing leaving passengers waypoints if other passengers have it as well
                 if passenger["passengerStart"] not in locations_count:
                     locations_count[passenger["passengerStart"]] = 1
                 else:

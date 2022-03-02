@@ -1,26 +1,33 @@
 import {View} from "react-native";
-import {Button, Heading, Text} from "native-base";
+import {Button, Heading, Text, Box, HStack, VStack, ScrollView} from "native-base";
 import {v4} from "uuid";
 import {getDatabase, get, ref, remove, update} from "firebase/database";
 import {removeFirebaseTrip, useAppDispatch, useAppSelector, timedate} from "../../hooks";
 import {resetTripState, setDistance} from "../../reducers/trips-reducer";
 import {updateStatus} from "../../reducers/user-reducer";
 import {useEffect, useState} from "react";
-import TripAlertModal from "./TripAlertModal"
+import TripAlertModal from "./TripAlertModal";
+import Profile from "../user/Profile";
+import {heightPercentageToDP} from "react-native-responsive-screen";
+import TripPassengers from "./TripPassengers";
 
-function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) { 
+
+function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) {
     const db = getDatabase();
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
     const user = useAppSelector(state => state.user);
     const backendURL = useAppSelector(state => state.globals.backendURL);
 
+    const dcuCampuses = {
+        "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9": "DCU Glasnevin",
+        "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland": "DCU St.Pat's"
+    };
+
     const [isCancelTripPressed, setIsCancelTripPressed] = useState(false);
 
     // cancel
     const cancelTrip = () => {
-        // console.log("Trip Cancelled.");
-
         // alert "are you sure" then delete from db
         fetch(`${backendURL}/remove_trip`, {
             method: "POST",
@@ -32,7 +39,6 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
             body: JSON.stringify({})
         }).then(response => response.json().then(data => ({status: response.status, data: data})))
         .then(res => {
-            // console.log(res);
             if (res.status === 200) {
                 removeFirebaseTrip(trips.id, res.data.uids);
             }
@@ -41,7 +47,7 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
     }
 
 
-    // end
+    // driver end trip
     const endTrip = () => {
         fetch(`${backendURL}/end_trip`, {
             method: "POST",
@@ -63,63 +69,85 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
         })
     }
 
-    // useEffect(() => {
-
-    //     console.log(trips.initialETA)
-    //     console.log(trips.ETA)
-    // }, [trips.initialETA, trips.ETA])
-
     return (
-             <View style={{padding: 10}}>
-                  <Heading mb={2}>Current Trip</Heading>
-                  <Heading size="md">From:</Heading>
-                  <Text>{trips.locations.startingLocation.marker.description}</Text>
-                  <Text>To: {trips.locations.destLocation.marker.description}</Text>
-                  <Text>Departure Time:</Text>
-                  <Text style={{fontWeight: "bold"}}>{timedate(trips.timeOfDeparture)}</Text>
-                  <Text>ETA:</Text>
-                  <Text style={{fontWeight: "bold"}}> {new Date(trips.ETA).toLocaleTimeString().slice(0, 5)}</Text>
-                  
-                  <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
-                      return (<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>)
-                    })
-                  }
-                  </Text>
+             <View style={{backgroundColor: "grey"}}>
+                <Box mb={1}>
+                    {/* <Heading borderBottomColor="white" borderBottomRadius="2" color="white" mb={2}> */}
+                    <Heading color="muted.100" marginX={0} padding={2}  size="lg" bg="muted.800">
+                        Your Current Trip</Heading>
+                    <Box bg="red" style={{elevation: 999}} marginX={3} mt={1} mb={2}>
+                        <HStack>
+                            <Text color="white" bold fontSize="lg">From: {" "}</Text>
+                            <Text color="white" fontSize="lg">{trips.locations.startingLocation.marker.description in dcuCampuses ? dcuCampuses[trips.locations.startingLocation.marker.description] : trips.locations.startingLocation.marker.description}</Text>
+                        </HStack>
+                        <HStack>
+                            <Text color="white" bold fontSize="lg">To: {"      "}</Text>
+                            <Text color="white" fontSize="lg">{trips.locations.destLocation.marker.description in dcuCampuses ? dcuCampuses[trips.locations.destLocation.marker.description] : trips.locations.destLocation.marker.description}</Text>
+                        </HStack>
+                    </Box>
 
-                  <Text>{trips.availableSeats} Empty seats</Text>
+                    <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
+                    {/* */}
+                    {/* */}
+                    <Box mt={2} bg="blue" marginX={3} mb={2}>
+                        <HStack space={"30%"}>
+                            <VStack>
+                                <Text color="white">Departure Time:</Text>
+                                <Text color="white" bold>{timedate(trips.timeOfDeparture)}</Text>
+                            </VStack>
+                            <VStack>
+                                <Text color="white">Estimated Arrival Time:</Text>
+                                <Text color="white" bold>{new Date(trips.ETA).toLocaleTimeString().slice(0, 5)}</Text>
+                            </VStack>
+                        </HStack>
 
-                  <Button>View Route</Button>
+                    </Box>
+
+                    <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
+
+                    <Box m={3}>
+                        <TripPassengers passengers={trips.passengers} showPhoneNumbers={true}/>
+                    </Box>
+                    <Text marginX={3} color="white">{trips.availableSeats} Available seats</Text>
+                </Box>
+                <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
+
+                 <Box marginX={3} marginY={2}>
+                     <Text color="white">Total Distance:{"  "}{trips.distance}</Text>
+                     <Text color="white">Total Duration:{"  "}{trips.duration}</Text>
+                 </Box>
 
 
                  {isTripDeparted ?
-                     <Button onPress={() => {
-                         endTrip()
-                     }}>
+                     <Button onPress={() => {endTrip()}}>
                          Trip Complete
                      </Button>
                      :
                      <>
-                         <Button onPress={() => {
-                            
+                        <Button.Group mb={2} mx={{base:"auto", md:0}} alignSelf="center" size="lg">
+                            <Button shadow={1} colorScheme="red" onPress={() => {setIsCancelTripPressed(true)}}>Cancel Trip</Button>
 
-                             update(ref(db, `/trips/${trips.id}`), {[`/status`]: "departed"}) 
-                             get(ref(db, `/tripRequests/${trips.id}`)).then((snapshot) => { 
+                            <Button shadow={1} onPress={() => {
+
+
+                                update(ref(db, `/trips/${trips.id}`), {[`/status`]: "departed"})
+                                get(ref(db, `/tripRequests/${trips.id}`)).then((snapshot) => {
                                 if (snapshot.val() !== null) {
                                     let passengerKeys = Object.keys(snapshot.val());
                                     passengerKeys.map((key) => {
                                         update(ref(db, `/users/`), {[`/${key}`]: {tripRequested: {tripID: trips.id, requestStatus: "declined", status: ""}}});
-                                    }) // 
+                                    })
                                 }
-                                remove(ref(db, `/tripRequests/${trips.id}`)); 
+                                remove(ref(db, `/tripRequests/${trips.id}`));
                             })
-                            
-                         }}>
-                             START Trip
-                         </Button>
-                         <Button colorScheme="red" onPress={() => {setIsCancelTripPressed(true)}}>Cancel Trip</Button>
-                     </>
+
+                            }}>
+                                Start Trip
+                            </Button>
+                        </Button.Group>
+                    </>
                  }
-                    
+
                     {isCancelTripPressed &&
                         <TripAlertModal
                             headerText="Are you sure you want to Cancel Trip?"

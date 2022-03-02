@@ -4,7 +4,7 @@ import {SwipeablePanel} from "rn-swipeable-panel";
 import {StyleSheet, TouchableOpacity} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {v4} from "uuid";
-import {storeTripRequest, useAppDispatch, useAppSelector} from "../../hooks";
+import {storeTripRequest, useAppDispatch, useAppSelector, timedate} from "../../hooks";
 import {setTimeOfDeparture, updateTripState} from "../../reducers/trips-reducer";
 import {updateStatus, updateTripRequestStatus} from "../../reducers/user-reducer";
 import {useEffect, useState} from "react";
@@ -22,6 +22,11 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
     const [isPanelActive, setIsPanelActive] = useState(false);
     const [tripsFound, setTripsFound] = useState<object | null>(null);
     const [showUserModal, setShowUserModal] = useState(false);
+
+    const dcuCampuses = {
+        "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9": "DCU Glasnevin",
+        "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland": "DCU St.Pat's"
+    };
 
     const openPanel = () => {
         setIsPanelActive(true);
@@ -183,16 +188,14 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                                   <Box key={v4()} style={styles.tripButton} bg="light.50" rounded={20} shadow={0}>
                                           <HStack alignItems="center">
                                               <VStack maxWidth="75%">
-                                                  <HStack alignItems="center">
+                                                  <HStack alignItems="center" mb={2}>
                                                       <View marginRight={5}>
                                                           <VStack alignItems="center">
                                                               <Profile uid={tripsFound[tripKey].driver_id} mode="iconModal"/>
                                                               <Text mt="1" style={{fontWeight: "bold", fontSize: heightPercentageToDP("2.5%")}}>
                                                                   {tripsFound[tripKey].driver_name}
                                                               </Text>
-                                                              <TouchableOpacity onPress={() => {request(tripsFound[tripKey])}} style={{alignItems: "center", marginTop: 1, backgroundColor: "black", borderRadius: 2, width: widthPercentageToDP(13)}}>
-                                                                  <Icon as={Ionicons} name="notifications" color={"white"} size={heightPercentageToDP("4%")}/>
-                                                              </TouchableOpacity>
+                                                              <Button mt={1} onPress={() => {request(tripsFound[tripKey])}}>Request</Button>
                                                           </VStack>
                                                       </View>
 
@@ -203,36 +206,28 @@ function TripPicker({showTripAvailableModal, setShowTripAvailableModal, filtered
                                                                   <Icon as={Ionicons} color={sameCampusColorCondition} name="ellipse" size={heightPercentageToDP("3%")}/>
                                                               }
                                                           </HStack>
-                                                          {!isTripToDCU ?
+
+
                                                             <Text>
-                                                                {tripsFound[tripKey].start.name}
+                                                                {tripsFound[tripKey].start.name in dcuCampuses ? dcuCampuses[tripsFound[tripKey].start.name] : tripsFound[tripKey].start.name}
+                                                            {/* */}
                                                             </Text>
-                                                            :
-                                                            <Text>{tripsFound[tripKey].start.name}</Text>
-                                                          }
+
                                                           <HStack alignItems="center" space={1} mt={1}>
                                                               <Heading size={"md"}>To</Heading>
                                                               {isTripToDCU &&
                                                                   <Icon as={Ionicons} color={tripsFound[tripKey].isCampusSame ? "green.800" : "orange.400"} name="ellipse" size={heightPercentageToDP("3%")}/>
                                                               }
                                                           </HStack>
-                                                          {isTripToDCU ?
-                                                            <Text>
-                                                                {tripsFound[tripKey].destination.name}
-                                                            </Text>
-                                                            :
-                                                            <Text>To: {tripsFound[tripKey].destination.name}</Text>
-                                                          }
+                                                          <Text>
+                                                              {tripsFound[tripKey].destination.name in dcuCampuses ? dcuCampuses[tripsFound[tripKey].destination.name] : tripsFound[tripKey].destination.name}
+                                                          </Text>
                                                       </VStack>
 
-
-                                                      {/*<Text fontWeight="bold">{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>*/}
                                                   </HStack>
 
-
-                                                  <Text fontWeight="bold">{tripsFound[tripKey].distance} {tripsFound[tripKey].duration}</Text>
-                                                  <Text fontWeight="bold">Departing at {tripsFound[tripKey].time_of_departure}</Text>
-                                                  <Text fontWeight="bold">ETA at {tripsFound[tripKey].ETA}</Text>
+                                                  <Text fontWeight="bold">Departing at:{"  "}{timedate(tripsFound[tripKey].time_of_departure)}</Text>
+                                                  <Text fontWeight="bold">ETA at:{"  "}{timedate(tripsFound[tripKey].ETA)}</Text>
                                               </VStack>
 
                                           </HStack>

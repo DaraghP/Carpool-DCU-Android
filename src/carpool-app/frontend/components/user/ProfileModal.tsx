@@ -3,7 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {TouchableOpacity, TouchableWithoutFeedback, View} from "react-native";
 import {useAppSelector} from "../../hooks";
 
-function ProfileModal({uid, showUserModal, setShowUserModal, setUserDescriptionText, editDescription, setEditDescription, profileData, setProfileDescription, userDescriptionText}) {
+function ProfileModal({uid, showPhoneNumber, showUserModal, setShowUserModal, setUserDescriptionText, editDescription, setEditDescription, profileData, setProfileDescription, userDescriptionText}) {
     const user = useAppSelector(state => state.user);
 
     return (
@@ -23,7 +23,14 @@ function ProfileModal({uid, showUserModal, setShowUserModal, setUserDescriptionT
 
                             <Divider my="4" shadow={1}/>
 
-                            <HStack space={2} alignItems="center">
+                            {showPhoneNumber &&
+                                <>
+                                    <Heading size={"md"}>Phone Number</Heading>
+                                    <Text>{profileData.phone_number}</Text>
+                                </>
+                            }
+
+                            <HStack mt={2} space={2} alignItems="center">
                                 <Heading size={"md"} mb={2}>Description</Heading>
                                 {(uid === user.id && editDescription) &&
                                     <>

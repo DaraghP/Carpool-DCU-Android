@@ -138,12 +138,12 @@ function TripScreen() {
         } else {
             initialETA = new Date(trips.timeOfDeparture)
         }
-    
-        
+
+
         console.log(initialETA)
         initialETA.setSeconds(initialETA.getSeconds() + trips.initialDurationSeconds)
         console.log(initialETA)
-        console.log("TEST:", initialETA.toLocaleTimeString()); 
+        console.log("TEST:", initialETA.toLocaleTimeString());
 
         let trip_data = {
             start: {
@@ -161,11 +161,11 @@ function TripScreen() {
             available_seats: trips.availableSeats,
             duration: trips.duration,
             distance: trips.distance,
-            time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(), 
+            time_of_departure: trips.timeOfDeparture !== "" ? new Date(trips.timeOfDeparture) : new Date(),
             ETA: initialETA,
         };
 
-        if (trips.timeOfDeparture === "") { 
+        if (trips.timeOfDeparture === "") {
             dispatch(setTimeOfDeparture(new Date().toString()));
         }
 
@@ -183,9 +183,9 @@ function TripScreen() {
                     if (!("errorType" in res)) {
                         let isFirebaseTripCreated = createFirebaseTrip(user.status, trip_data.available_seats, res.tripID, res.driverID, `${user.firstName} ${user.lastName[0]}.`);
                         if (isFirebaseTripCreated) {
-                            dispatch(updateStatus("driver_busy"));  
+                            dispatch(updateStatus("driver_busy"));
                         }
-                        dispatch(showWaypoints(true));
+                        dispatch(showWaypoints(false));
                         dispatch(showNumberOfSeatsAndTimePicker(false));
                         setPreviousTripID(trips.id)
                         dispatch(updateTripState({id: res.tripID, ETA: res.ETA}));
@@ -197,38 +197,12 @@ function TripScreen() {
         }
     }
 
-    const setPassengerTimeAndLocation = () => {
-        let passengerDetails = trips.passengers[`passenger${user.id}`];
-        if (isTripToDCU) { 
-            let passengerLoc = passengerDetails["passengerStart"]; 
-            let test = trips.route["route"].filter((obj) => obj.start !== passengerLoc);
-        
-            dispatch(updateTripState({
-                "passengerDepartureTime": test["departure_time"], 
-                "passengerArrivalTime" : trips.ETA,
-                "passengerStartLoc": test["start"],
-                "passengerDestLoc": trips.locations.destLocation.marker.description
-            }))
-        } else {
-            let passengerLoc = passengerDetails["passengerDestination"]
-            let test = trips.route["route"].find(l => l.destination === passengerLoc);
-            dispatch(updateTripState({
-                "passengerDepartureTime": trips.timeOfDeparture, 
-                "passengerArrivalTime" : test["arrival_time"],
-                "passengerStartLoc": trips.locations.startingLocation.marker.description,
-                "passengerDestLoc": test["destination"]
-            }))
-        }
-    }
-
-
-    const convertTripDataFromJSON = async (tripData) => {
+    const convertTripDataFromJSON = (tripData, passengerRoute) => {
         if (tripData !== undefined) {
 
             let newWaypoints = {};
 
             if (Object.keys(tripData["waypoints"]).length > 0) {
-
                 Object.keys(tripData["waypoints"]).map((key) => {
                     newWaypoints[key] = createLocationObj(key,
                         "waypoint",
@@ -242,6 +216,7 @@ function TripScreen() {
 
             dispatch(updateTripState({
                 ...tripData,
+                ...passengerRoute,
                 locations: {
                     startingLocation: createLocationObj(
                         "startingLocation",
@@ -280,11 +255,7 @@ function TripScreen() {
             .then((res) => {
                 if (!("error" in res)) {
                     if (res.trip_data !== null) {
-                        convertTripDataFromJSON(res.trip_data).then(() => {
-                            if (trips.role === "passenger") {
-                                setPassengerTimeAndLocation();
-                            }
-                        })
+                        convertTripDataFromJSON(res.trip_data, res.passenger_route);
                     }
 
                     if (trips.role === "passenger" && !passengerGotInitialMapData) {
@@ -297,7 +268,6 @@ function TripScreen() {
                     if (trips.role === "passenger") {
                         setIsPassengerInTrip(false);
                     }
-                    // dispatch(updateTripRequestStatus("error"));
                     console.log(res.error);
                 }
             })
@@ -316,27 +286,7 @@ function TripScreen() {
             off(ref(db, `/trips/${previousTripID}/passengers/`));
             off(ref(db, `/trips/${previousTripID}/status`));
             off(ref(db, `/trips/${previousTripID}`));
-            // off(query(ref(db, `/trips`), orderByChild("status"), equalTo("departed")))
             setPreviousTripID(trips.id);
-
-            // onValue(ref(db, `/trips`), (snapshot) => {
-            //     if (snapshot.val() != null) {
-            //         let tripsFiltered = new Set();
-            //         Object.keys(snapshot.val()).map((tripKey) => {
-            //             let trip = snapshot.val()[tripKey];
-            //             console.log(trip)
-            //             if (trip.status === "departed" || trip.availableSeats < 1)  {
-            //                 tripsFiltered.add(parseInt(tripKey));
-            //             }
-            //         })
-            //
-            //         console.log(tripsFiltered)
-            //         setFilteredTrips(tripsFiltered);
-            //     }
-            //     else {
-            //         setFilteredTrips(new Set());
-            //     }
-            // })
 
             onValue(ref(db, `/tripRequests/${trips.id}`), (snapshot) => {
                 tempFbTripsVal = {
@@ -429,14 +379,13 @@ function TripScreen() {
             }
         }
         // else passenger has been denied their request
-    }, [user.tripRequestStatquests, 
-          ar info,
-        settings (prevent deleting account for ongoing trip), 
-            are you sure alerts (cancel/leave trip) 
-            add spinners to buttons that take a while (login/logout)
-            */
-        } // 
-        }, [firebaseTripsVal.data.trip.passengers]) 
+    }, [user.tripRequestStatus])
+
+    useEffect(() => {
+        if ((user.status === "passenger_busy" && passengerGotInitialMapData) || user.status === "driver_busy") {
+            getOrJoinTrip();
+        }
+    }, [firebaseTripsVal.data.trip.passengers])
 
     useEffect(() => {
         if (user.status === "available") {
@@ -460,18 +409,6 @@ function TripScreen() {
             }
 
             <View style={{flex: 1, elevation: -1, zIndex: -1}}>
-                {/* {user.status === "available" &&
-                    <>
-                        {trips.role === "driver" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
-                          <Button onPress={() => {
-                            increaseWaypoints();
-                        }}>
-                          <Text color="white">Add waypoint</Text>
-                          </Button>
-                        }
-                    </>
-                } */}
-
                 <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
 
                 {!hideMap &&

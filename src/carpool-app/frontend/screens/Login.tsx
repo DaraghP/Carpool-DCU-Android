@@ -4,9 +4,11 @@ import {useEffect, useRef, useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {updateUserState, updateTripRequestStatus} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector, createLocationObj} from "../hooks";
-import {setLocations, updateTripState} from "../reducers/trips-reducer";
+import {setLocations, updateRole, updateTripState} from "../reducers/trips-reducer";
 import {getDatabase, get, ref, child, query, orderByChild, equalTo} from "firebase/database";
 import { createDispatchHook } from "react-redux";
+import Password from "../components/auth/Password";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 
 function LoginScreen({ navigation }) {
   const dispatch = useAppDispatch();
@@ -18,7 +20,6 @@ function LoginScreen({ navigation }) {
   const [usernameText, setUsernameText] = useState("");
   const [passwordText, setPasswordText] = useState("");
   const [errorFound, setErrorFound] = useState(false);
-//   const [isTripToDCU, setIsTripToDCU] = useState<boolean | undefined>(undefined);
 
   const db = getDatabase();
 
@@ -46,7 +47,7 @@ function LoginScreen({ navigation }) {
                 dispatch(updateTripState({role: "passenger"}))
             }
             if (res.status === "driver_busy") {
-                dispatch(updateTripState({role:"driver"}));
+                dispatch(updateTripState({role: "driver"}));
             }
 
             if (res.status === "available") {
@@ -54,19 +55,19 @@ function LoginScreen({ navigation }) {
                     .then((snapshot) => {
 
                         dispatch(updateTripRequestStatus(snapshot.val()?.tripRequested.requestStatus));
-
+                        dispatch(updateRole("passenger"))
                         if (snapshot.val()?.tripRequested.requestStatus) {
                             dispatch(updateUserState({status: "passenger_busy"}));
                             get(ref(db, `/trips/${snapshot.val()?.tripRequested.tripID}`))
                                 .then((snapshot2) => {
-                                        dispatch(updateTripState({driverName: snapshot2.val()?.driverName}))
+                                        dispatch(updateTripState({driverID:snapshot2.val()?.driverID, driverName: snapshot2.val()?.driverName}))
                                 })
                         }
                     })
             }
 
             // if user.status === "available" navigates to home screen once globals.user.token updates otherwise their trip on either driver/passenger screen
-            dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token, dateCreated: res.date_joined}));
+            dispatch(updateUserState({id: res.id, username: usernameText, firstName: res.first_name, lastName: res.last_name, status: res.status, token: res.token, dateCreated: res.date_joined, phoneNumber: res.phone_no}));
 
             if ("waypoints" in res.trip_data) {
                 Object.keys(res.trip_data["waypoints"]).map((key) => {
@@ -81,7 +82,7 @@ function LoginScreen({ navigation }) {
             dispatch(updateTripState({
                 locations: {
                     ...trips.locations,
-                    startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"].lat, lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
+                    startingLocation: createLocationObj("startingLocation", "start", "Starting Point", {lat: res.trip_data["start"]["lat"], lng: res.trip_data["start"].lng}, res.trip_data["start"].name, true),
                     destLocation: createLocationObj("destLocation", "destination", "Destination Point", {lat: res.trip_data["destination"].lat, lng: res.trip_data["destination"].lng}, res.trip_data["destination"].name, true),
                     ...res.trip_data["waypoints"],
                 },
@@ -112,7 +113,7 @@ function LoginScreen({ navigation }) {
 
                 <FormControl isInvalid={errorFound}>
                     <FormControl.Label isRequired>Password</FormControl.Label>
-                    <Input key={2} type="password" placeholder="Password" ref={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
+                    <Password key={2} passwordRef={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
                     <FormControl.ErrorMessage>Incorrect Username or Password</FormControl.ErrorMessage>
                 </FormControl>
 
@@ -133,6 +134,8 @@ function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    height: heightPercentageToDP(100),
+    width: widthPercentageToDP(100),
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',

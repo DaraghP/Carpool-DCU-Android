@@ -1,10 +1,11 @@
-import {Button, Center, VStack, Heading, Spinner} from "native-base";
+import {Button, Center, VStack, Heading, Spinner, ScrollView} from "native-base";
 import TripScreen from "./TripScreen"
 import {SafeAreaView} from "react-native";
 import {useRef, useEffect, useState} from "react";
 import {useAppSelector, useAppDispatch} from "../hooks";
 import {FormControl, Input} from "native-base";
 import {updateRole, resetTripState} from "../reducers/trips-reducer";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 
 
 function DriverScreen({navigation}) {
@@ -88,7 +89,7 @@ function DriverScreen({navigation}) {
     };
 
     return (
-        <SafeAreaView style={{flex: 1}}>
+        <SafeAreaView style={{flex: 1, height: heightPercentageToDP(100), width: widthPercentageToDP(100)}}>
             {!getDriverRequestFinished &&
                 <Center>
                     <Spinner size="lg" height="100%"/>
@@ -96,40 +97,42 @@ function DriverScreen({navigation}) {
             }
 
             {getDriverRequestFinished && !hasCreatedDriverRole &&
-                <VStack space={"5"} margin="5" alignItems="center">
-                    <Heading size="md">Car Details</Heading>
-                    <FormControl>
-                        <FormControl.Label>Make</FormControl.Label>
-                        <Input placeholder="Make" ref={makeInput} onChangeText={(text: string) => {
-                            setMakeText(text);
-                        }}/>
-                    </FormControl>
+                <ScrollView keyboardShouldPersistTaps={"handled"}>
+                    <VStack space={"5"} margin="5" alignItems="center">
+                        <Heading size="lg">Car Details</Heading>
+                        <FormControl>
+                            <FormControl.Label>Make</FormControl.Label>
+                            <Input placeholder="Make" ref={makeInput} onChangeText={(text: string) => {
+                                setMakeText(text);
+                            }}/>
+                        </FormControl>
 
-                    <FormControl>
-                        <FormControl.Label>Model</FormControl.Label>
-                        <Input placeholder="Model" ref={modelInput} onChangeText={(text: string) => {
-                            setModelText(text);
-                        }}/>
-                    </FormControl>
+                        <FormControl>
+                            <FormControl.Label>Model</FormControl.Label>
+                            <Input placeholder="Model" ref={modelInput} onChangeText={(text: string) => {
+                                setModelText(text);
+                            }}/>
+                        </FormControl>
 
-                    <FormControl>
-                        <FormControl.Label>Colour</FormControl.Label>
-                        <Input placeholder="Colour" ref={colourInput} onChangeText={(text: string) => {
-                            setColourText(text);
-                        }}/>
-                    </FormControl>
+                        <FormControl>
+                            <FormControl.Label>Colour</FormControl.Label>
+                            <Input placeholder="Colour" ref={colourInput} onChangeText={(text: string) => {
+                                setColourText(text);
+                            }}/>
+                        </FormControl>
 
-                    <FormControl>
-                        <FormControl.Label>License Plate</FormControl.Label>
-                        <Input placeholder="License Plate" ref={licensePlateInput} onChangeText={(text: string) => {
-                            setLicensePlateText(text);
-                        }}/>
-                    </FormControl>
+                        <FormControl>
+                            <FormControl.Label>License Plate</FormControl.Label>
+                            <Input placeholder="License Plate" ref={licensePlateInput} onChangeText={(text: string) => {
+                                setLicensePlateText(text);
+                            }}/>
+                        </FormControl>
 
-                    <Button mt="5" width="100%" onPress={() => {createDriver()}}>
-                        Submit Car Information
-                    </Button>
-                </VStack>
+                        <Button mt="5" width="100%" onPress={() => {createDriver()}}>
+                            Submit Car Information
+                        </Button>
+                    </VStack>
+                </ScrollView>
             }
 
             {getDriverRequestFinished && hasCreatedDriverRole &&

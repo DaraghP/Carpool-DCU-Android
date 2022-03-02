@@ -1,5 +1,5 @@
-import {Heading, Text, Button, HStack, VStack} from "native-base";
-import {View} from "react-native";
+import {Heading, Text, Button, Box, HStack, VStack} from "native-base";
+import {View, Linking, TouchableOpacity} from "react-native";
 import {updateUserState} from "../../reducers/user-reducer";
 import {resetTripState} from "../../reducers/trips-reducer";
 import {removeFirebaseTrip, useAppDispatch, useAppSelector, timedate} from "../../hooks";
@@ -7,6 +7,8 @@ import {get, getDatabase, ref, remove, update} from "firebase/database";
 import {v4} from "uuid";
 import {useEffect, useState} from "react";
 import TripAlertModal from "./TripAlertModal";
+import Profile from "../user/Profile";
+import TripPassengers from "./TripPassengers";
 
 
 function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCampusSelected, isTripDeparted}) {
@@ -17,6 +19,10 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
     const trips = useAppSelector(state => state.trips);
     const [isLeaveTripPressed, setIsLeaveTripPressed] = useState(false);
 
+    const dcuCampuses = {
+        "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9": "DCU Glasnevin",
+        "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland": "DCU St.Pat's"
+    };
 
     const passengerCancelTrip = async (availableSeats) => {
         await remove(ref(db, `/users/${user.id}`));
@@ -50,7 +56,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                 }
             })
     }
-    
+
 
 
     useEffect(() => {
@@ -95,46 +101,63 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
 
     return (
         (trips.role === "passenger" && user.tripRequestStatus === "" && user.tripStatus === "in_trip" && !filteredTrips.has(trips.id) ?
-            <View>
+            <View style={{backgroundColor: "grey"}}>
+              <Box mb={2}>
 
-                <Heading mb={2}>Current Trip</Heading>
-                <Text>From: {trips.passengerStartLoc}</Text>
-                <Text>To: {trips.passengerDestLoc}</Text>
-                <HStack space={"auto"}>
-                    <VStack>
-                        <Text>Departure Time:</Text>
-                        <Text
-                            style={{fontWeight: "bold"}}>{timedate(trips.passengerDepartureTime)}</Text>
-                    </VStack>
-                    
-                    <VStack style={{
-                        flexDirection: "row",
-                        marginLeft: "auto",
-                        justifyContent: "flex-end",
-                        alignSelf: "flex-end" 
-                    }}>
+                <Heading color="muted.100" marginX={0} padding={3}  size="lg" bg="muted.800">{trips.driverName}'s Trip</Heading>
 
-                        <Text>Arrival Time:</Text>
-                        <Text>{timedate(trips.passengerArrivalTime)}</Text>
-                    </VStack>
-                </HStack>
+                <Box marginX={3} mt={2} mb={2}>
+                    <HStack>
+                        <Text color="white" bold fontSize="lg">From: {" "}</Text>
+                        <Text color="white" fontSize="lg">{trips.passengerStartLoc in dcuCampuses ? dcuCampuses[trips.passengerStartLoc] : trips.passengerStartLoc}</Text>
+                    </HStack>
+                    <HStack>
+                        <Text color="white" bold fontSize="lg">To: {"      "}</Text>
+                        <Text color="white" fontSize="lg">{trips.passengerDestLoc in dcuCampuses ? dcuCampuses[trips.passengerDestLoc] : trips.passengerDestLoc}</Text>
+                    </HStack>
+                </Box>
 
-                <Text>Passengers: {Object.keys(trips.passengers).map((passengerKey) => {
-                        return (<Text fontWeight="bold" key={v4()}>{trips.passengers[passengerKey].passengerName}  </Text>);
-                    })
-                    }
-                </Text>
+                <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
 
-                <Text>{trips.availableSeats} Empty seats</Text>
-                <Text>Driver's Phone No: {trips.driverPhone}</Text>
-                <Text>Driver's Car: {trips.car["colour"]} {trips.car["make"]} {trips.car["model"]}</Text>
+
+                <Box mt={2} bg="blue" marginX={3} mb={2}>
+                    <HStack space={"30%"}>
+                        <VStack>
+                            <Text color="white">Departure Time:</Text>
+                            <Text color="white" bold>{timedate(trips.passengerDepartureTime)}</Text>
+                        </VStack>
+                        <VStack>
+                            <Text color="white">Estimated Arrival Time:</Text>
+                            <Text color="white" bold>{new Date(trips.passengerArrivalTime).toLocaleTimeString().slice(0, 5)}</Text>
+                        </VStack>
+                    </HStack>
+
+                </Box>
+
+                <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
+
+                <Box m={3}>
+                    <TripPassengers passengers={trips.passengers}/>
+                </Box>
+                <Text marginX={3} color="white">{trips.availableSeats} Available seats</Text>
+              </Box>
+
+              <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
+
+              <Box marginX={3} marginY={2}>
+                  <HStack>
+                      <Text color="white">Driver's Phone No:{"   "}</Text>
+                      <Text color="white" bold selectable={true}>{trips.driverPhone}</Text>
+                  </HStack>
+                <Text color="white">Driver's Car:{"    "}{trips.car["colour"]} {trips.car["make"]} {trips.car["model"]}</Text>
+              </Box>
 
                 {!isTripDeparted ?
-                    <Button onPress={() => {
+                    <Button colorScheme="red" size="lg" onPress={() => {
                         setIsLeaveTripPressed(true);
                         }}
                     >
-                        Cancel Trip
+                        Leave Trip
                     </Button>
                     :
                     <Text>Driver has departed</Text>

@@ -15,7 +15,7 @@ function NumOfSeatsAndDepartureTimeCollapsible() {
     const showWaypointsCollapsible = useAppSelector(state => state.collapsibles.showWaypoints);
 
     return (
-        (trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered ?
+        (!showWaypointsCollapsible && !user.tripRequestStatus && !user.tripStatus && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered ?
                 <>
                     <Button
                         style={{backgroundColor: "white"}}
@@ -25,13 +25,13 @@ function NumOfSeatsAndDepartureTimeCollapsible() {
                     >
                         <HStack space={3} alignItems="center">
                             <Heading size={"sm"}>
-                                Number of seats and departure time
+                                Departure time {trips.role === "driver" && "and number of seats"}
                             </Heading>
                             <Icon as={Ionicons} name={showDepartureAndTimePickerCollapsible ? "chevron-down" : "chevron-up"}/>
                         </HStack>
                     </Button>
 
-                    <Collapsible collapsed={showDepartureAndTimePickerCollapsible}>
+                    <Collapsible collapsed={!showDepartureAndTimePickerCollapsible}>
                         <VStack space={2} padding={5} borderTopWidth={0.5}>
                             <Heading size={"md"} flexGrow="1">Pick your departure time {trips.role === "driver" && "\nand number of seats"}</Heading>
                             <Divider/>

@@ -1,8 +1,10 @@
-import {StyleSheet, Text, TouchableOpacity, View} from "react-native";
-import {Button, Divider, Heading, ScrollView} from "native-base";
-import {updateUserState} from "../../reducers/user-reducer";
+import {StyleSheet, TouchableOpacity, View} from "react-native";
+import {ScrollView, Text} from "native-base";
 import {useAppDispatch, useAppSelector} from "../../hooks";
+import Profile from "../user/Profile";
+import {updateUserState} from "../../reducers/user-reducer";
 import {resetTripState} from "../../reducers/trips-reducer";
+import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../../reducers/collapsibles-reducer";
 
 function SettingsMenu({ navigation }) {
     const dispatch = useAppDispatch();
@@ -20,10 +22,12 @@ function SettingsMenu({ navigation }) {
             body: null
         }).then(response => ({ status: response.status }))
           .then((data) => {
-            if (data.status === 200) {
+            if (data.status === 200 || data.status === 401) {
                 // navigates back to Login screen once token is an empty string (see App.tsx)
                 dispatch(updateUserState({username: "", token: "", status: "available", tripRequestStatus: "", tripStatus: ""}));
                 dispatch(resetTripState());
+                dispatch(showWaypoints(false));
+                dispatch(showNumberOfSeatsAndTimePicker(false));
             }
           }).catch((e) => {
               console.error(e);
@@ -32,28 +36,20 @@ function SettingsMenu({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <ScrollView my="5">
-                <Heading mt="5" ml="2" mb="2">
-                    <Text style={{fontWeight: "800", letterSpacing: 2}}>{user.username}</Text>
-                    <Button colorScheme="secondary" onPress={() => {logout()}}>Logout</Button>
-                </Heading>
-
-                <TouchableOpacity style={[styles.settingsButton, {borderTopColor: "#e4e4eb", borderTopWidth: 0.5}]}>
-                    <View>
-                        <Text>Edit Profile</Text>
-                    </View>
-                </TouchableOpacity>
+            <ScrollView keyboardShouldPersistTaps={"handled"}>
+                <Profile uid={user.id} mode="bar" logoutBtn={false}/>
 
                 <TouchableOpacity style={styles.settingsButton} onPress={() => {navigation.navigate("Account")}}>
                     <View>
                         <Text>Account Info</Text>
                     </View>
                 </TouchableOpacity>
-
-                <TouchableOpacity style={styles.settingsButton}>
+                {/*  */}
+                <TouchableOpacity style={{...styles.settingsButton}} onPress={() => {logout()}}>
                     <View>
                         <Text>Logout</Text>
                     </View>
+
                 </TouchableOpacity>
 
             </ScrollView>

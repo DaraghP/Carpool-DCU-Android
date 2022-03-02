@@ -109,7 +109,7 @@ export async function storeTripRequest(tripID, passengerData) {
         get(ref(db, `/trips/${tripID}`)).then((snapshot) => {
 
             if (snapshot.val() !== null) {
-                status = snapshot.val().status === "waiting";
+                status = snapshot.val().status === "waiting" && snapshot.val().availableSeats !== 0;
                 if (status) {
                     update(ref(db, `/tripRequests/${tripID}/`), {[`/${passengerData.passengerID}`]: {...passengerData}});
                     update(ref(db, `/users/`) , {[`/${passengerData.passengerID}`]: {tripRequested: {tripID: tripID, requestStatus: "waiting", status: ""}}});

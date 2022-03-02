@@ -1,8 +1,10 @@
 import {SafeAreaView, ScrollView, StyleSheet, Text, View} from "react-native";
-import {Stack, Button, Center, FormControl, Heading, Input} from "native-base";
+import {Stack, Button, Center, FormControl, Heading, Input, VStack, Box} from "native-base";
 import {useRef, useEffect, useState} from "react";
 import {updateUserState} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
+import Password from "../components/auth/Password";
 
 function RegisterScreen({ navigation }) {
   const dispatch = useAppDispatch();
@@ -51,7 +53,7 @@ function RegisterScreen({ navigation }) {
 
             // prevents memory leak
             if (mounted.current) {
-                dispatch(updateUserState({id: res.id, username: res.username, firstName: firstNameText, lastName: surnameText, token: res.token}));
+                dispatch(updateUserState({id: res.id, username: res.username, firstName: firstNameText, lastName: surnameText, token: res.token, phoneNumber: res.phone_no}));
             }
 
             setErrorType("");
@@ -68,9 +70,9 @@ function RegisterScreen({ navigation }) {
 
   return (
       <SafeAreaView style={styles.container}>
-          <ScrollView>
-            <Stack direction="column" width="250">
-                <Center>
+          <ScrollView style={{width: widthPercentageToDP(100)}} keyboardShouldPersistTaps={"handled"}>
+            <VStack width={widthPercentageToDP(75)} marginX="auto" my="5">
+                <Box alignItems="center">
                     <Heading size="md" mb="3">Register</Heading>
 
                     <FormControl isInvalid={errorType === "first_name"}>
@@ -99,13 +101,13 @@ function RegisterScreen({ navigation }) {
 
                     <FormControl isInvalid={errorType === "password" || errorType === "non_matching_passwords"}>
                         <FormControl.Label mt="5">Password</FormControl.Label>
-                        <Input type="password" placeholder="Password" ref={passwordInput} onChangeText={(text: string) => {setPasswordText(text)}}/>
+                        <Password passwordRef={passwordInput} onChangeText={(text: string) => {setPasswordText(text);}}/>
                         <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
                     </FormControl>
 
                     <FormControl isInvalid={errorType === "non_matching_passwords"}>
                         <FormControl.Label mt="5">Re-enter password</FormControl.Label>
-                        <Input type="password" placeholder="Password" ref={reEnterPasswordInput} onChangeText={(text: string) => {setReEnteredPasswordText(text)}}/>
+                        <Password passwordRef={reEnterPasswordInput} onChangeText={(text: string) => {setReEnteredPasswordText(text)}}/>
                         <FormControl.ErrorMessage>{errorText}</FormControl.ErrorMessage>
                     </FormControl>
 
@@ -116,8 +118,8 @@ function RegisterScreen({ navigation }) {
                     <Button width="100%" variant="subtle" colorScheme="tertiary" mt="3" onPress={() => navigation.navigate("Login")}>
                         Already have an account?
                     </Button>
-                </Center>
-          </Stack>
+                </Box>
+            </VStack>
         </ScrollView>
       </SafeAreaView>
   )
@@ -126,6 +128,7 @@ function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: widthPercentageToDP(100),
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',

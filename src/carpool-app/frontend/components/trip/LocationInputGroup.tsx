@@ -2,7 +2,7 @@ import CreateGoogleAutocompleteInput from "./CreateGoogleAutocompleteInput";
 import {v4} from "uuid";
 import {useAppDispatch, useAppSelector} from "../../hooks";
 import Collapsible from "react-native-collapsible";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {Button, Divider, Heading, HStack, Icon, VStack, Text} from "native-base";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import NumberOfSeatsSelector from "./NumberOfSeatsSelector";
@@ -17,30 +17,38 @@ function LocationInputGroup({isTripToDCU, setIsTripToDCU, campusSelected, setCam
     const showWaypointCollapsible = useAppSelector(state => state.collapsibles.showWaypoints);
     const showNumOfSeatsAndTimeCollapsible = useAppSelector(state => state.collapsibles.showNumberOfSeatsAndTimePicker);
 
+    useEffect(() => {
+        dispatch(showWaypoints(false));
+    }, [])
+
     return (
         <>
 
-            <CampusDirectionSelector
-                campusSelected={campusSelected}
-                setCampusSelected={(value: string) => {setCampusSelected(value)}}
-                isTripToDCU={isTripToDCU}
-                setIsTripToDCU={(value: boolean | undefined) => {setIsTripToDCU(value)}}
-            />
+            {((!trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) && !showWaypointCollapsible) &&
+                <CampusDirectionSelector
+                    campusSelected={campusSelected}
+                    setCampusSelected={(value: string) => {setCampusSelected(value)}}
+                    isTripToDCU={isTripToDCU}
+                    setIsTripToDCU={(value: boolean | undefined) => {setIsTripToDCU(value)}}
+                />
+            }
 
-            {trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered ?
+            {(!showWaypointCollapsible || (trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered)) ?
                 isTripToDCU ?
+                    ((!showWaypointCollapsible && trips.locations.destLocation.info.isEntered) ?
                     <CreateGoogleAutocompleteInput
-                        key={v4()}
                         locationObjName={"startingLocation"}
                         placeholder="Enter your starting point..."
                         style={{rounded: 5}}
                     />
+                    : null)
                     :
+                    ((!showWaypointCollapsible && trips.locations.startingLocation.info.isEntered) ?
                     <CreateGoogleAutocompleteInput
-                        key={v4()}
                         locationObjName={"destLocation"}
                         placeholder="Enter your destination..."
                     />
+                    : null)
                 : null
             }
 
@@ -60,7 +68,7 @@ function LocationInputGroup({isTripToDCU, setIsTripToDCU, campusSelected, setCam
                         </HStack>
                     </Button>
 
-                    <Collapsible collapsed={showWaypointCollapsible}>
+                    <Collapsible collapsed={!showWaypointCollapsible}>
                         <VStack space={2} paddingX={5} paddingBottom={5} borderTopWidth={0.2}>
                             <Divider/>
 
@@ -91,10 +99,10 @@ function LocationInputGroup({isTripToDCU, setIsTripToDCU, campusSelected, setCam
                                     }
                              </>
                             }
-                                    </VStack>
-                                </Collapsible>
+                        </VStack>
+                    </Collapsible>
 
-                            </>
+                </>
 
 
                 }
