@@ -11,6 +11,7 @@ import getDirections from "react-native-google-maps-directions";
 import MapMarkers from "./MapMarkers";
 import {heightPercentageToDP} from "react-native-responsive-screen";
 
+// Map component shows map with route and markers on Trip Screen
 function Map() {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user)
@@ -19,6 +20,7 @@ function Map() {
     const [isRouteTapped, setIsRouteTapped] = useState(false);
     const collapsibles = useAppSelector(state => state.collapsibles);
 
+    // used to zoom out/in on Map to show all markers
     const onMapReadyHandler = () => {
         if (mapRef.current) {
             setTimeout(() => {
@@ -30,14 +32,16 @@ function Map() {
         }
     }
 
+    // function creates an array of addresses from locations that have type of "waypoint"
+    // this array is used in MapViewDirections to display waypoints on map.
     const getWaypointNames = () => {
-        // creates an array of addresses from locations that have type of "waypoint"
         return (
             Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
                                         .map((key) => trips.locations[key].marker.description)
         );
     }
 
+    // converts the distance and duration values to strings and stores in redux
     const distanceDurationHandler = (data) => {
         dispatch(updateTripState({"initialDurationSeconds": data.duration * 60}))
 
@@ -59,10 +63,9 @@ function Map() {
           }
     }
 
-    useEffect(() => {
-        console.log(user.username, trips.role, user.tripRequestStatus)
-    }, [trips])
-
+    // Allows users to click on the route displayed on the map to get directions via the Google Maps app or default browser.
+    // This will show them a system alert before opening Google Maps.
+    // Sends trip data to Google Maps, so users can easily get directions.
     const onPressHandler = () => {
           if (trips.role === "driver") {
               setIsRouteTapped(true);
@@ -116,6 +119,7 @@ function Map() {
     }, [trips.locations])
 
     return (
+          // Map
           <MapView
               ref={mapRef}
               style={{flex: 1, minHeight: heightPercentageToDP(0.5)}}
@@ -127,6 +131,8 @@ function Map() {
               }}
               onMapReady={onMapReadyHandler}
           >
+
+              {/* If start and destination are in trips, shows route between them on map */}
               {trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered && (
                   <MapViewDirections
                       origin={trips.locations.startingLocation.marker.description}
@@ -147,7 +153,7 @@ function Map() {
                   />
 
               )}
-
+              {/* MapMarkers component shows the markers for each location on the map, with location information  */}
               <MapMarkers/>
           </MapView>
     )

@@ -1,3 +1,5 @@
+// index.tsx file: stores backend server URL, and manages Navigation tabs to each screen.
+
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { NativeBaseProvider, Box} from 'native-base';
@@ -13,6 +15,7 @@ import {updateRole, setLocations} from "./reducers/trips-reducer";
 import PassengerScreen from "./screens/Passenger";
 import DriverScreen from "./screens/Driver";
 import TripAlertModal from "./components/trip/TripAlertModal";
+import {showWaypoints} from "./reducers/collapsibles-reducer";
 
 const Tab = createBottomTabNavigator();
 
@@ -26,10 +29,13 @@ export default function Index() {
   const [showStatusPassengerBusyAlert, setShowStatusPassengerBusyAlert] = useState(false);
   const [showStatusDriverBusyAlert, setShowStatusDriverBusyAlert] = useState(false);
 
+  // stores backend URL where server is running on Heroku
   useEffect(() => {
-      dispatch(updateGlobalsState({backendURL: "http://e0ba-46-7-17-96.ngrok.io"}));
+      dispatch(updateGlobalsState({backendURL: "http://blooming-shelf-28383.herokuapp.com"}));
   }, [])
 
+  // shows only login/register tabs if user is not logged in.
+  // if user is logged in, hides login/register tabs and shows main tabs. (home, driver, passenger, settings)
   useEffect(() => {
     if (user.token !== "") {
       setHideAuthTabs(true);
@@ -158,7 +164,6 @@ export default function Index() {
                           }
                         }
 
-                        // console.log("Driver", routeCondition, routeName);
                         if (routeName === "Passenger") {
                           if (user.status === "available") {
                               setTabAlert(true)

@@ -1,6 +1,3 @@
-import {Avatar, Box, Button, Divider, Heading, HStack, Icon, Modal, Text, TextArea, VStack} from "native-base";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import {TouchableOpacity, TouchableWithoutFeedback, View} from "react-native";
 import {useEffect, useState} from "react";
 import {updateUserDescription} from "../../reducers/user-reducer";
 import {useAppDispatch, useAppSelector} from "../../hooks";
@@ -8,6 +5,7 @@ import ProfileIcon from "./ProfileIcon";
 import ProfileModal from "./ProfileModal";
 import ProfileBar from "./ProfileBar";
 
+// Profile component to show profile icon and description
 function Profile({uid, mode, logoutBtn = false,  showPhoneNumber = false, style = {}}) {
     const dispatch = useAppDispatch(); 
     const user = useAppSelector(state => state.user);
@@ -19,6 +17,7 @@ function Profile({uid, mode, logoutBtn = false,  showPhoneNumber = false, style 
     const [userDescriptionText, setUserDescriptionText] = useState("");
     const [isLoaded, setIsLoaded] = useState(false);
 
+    // makes request to backend /get_profile url, to get a user's profile description
     const getProfile = (uid) => {
         fetch(`${backendURL}/get_profile`, {
             method: "POST",
@@ -29,17 +28,18 @@ function Profile({uid, mode, logoutBtn = false,  showPhoneNumber = false, style 
             },
             body: JSON.stringify({uid: uid})
         }).then(response => response.json().then(data => ({status: response.status, data: data})))
-        .then((res) => {
-            if (res.status === 200) {
-                if (user.id === uid) {
-                    dispatch(updateUserDescription(res.data.profile_description));
-                }
+            .then((res) => {
+                if (res.status === 200) {
+                    if (user.id === uid) {
+                        dispatch(updateUserDescription(res.data.profile_description));
+                    }
 
-                setProfileData(res.data);
-            }
-        })
+                    setProfileData(res.data);
+                }
+            })
     }
 
+    // makes request to backend /set_profile_description url, to set a user's profile description
     const setProfileDescription = (profileDescription) => {
         fetch(`${backendURL}/set_profile_description`, {
             method: "POST",

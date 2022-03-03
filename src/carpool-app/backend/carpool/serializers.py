@@ -88,6 +88,11 @@ class CarpoolUserSerializer(serializers.ModelSerializer):
         return True
 
     def create(self, valid_data):
+        """
+        Creates user if all data is valid.
+        :param valid_data:
+        :return: user
+        """
         user = CarpoolUser(username=valid_data['username'])
         user.set_password(valid_data['password'])
         user.first_name = valid_data["first_name"].capitalize()
@@ -140,6 +145,7 @@ class CarSerializer(serializers.ModelSerializer):
         car = Car(make=valid_data["make"], model=valid_data["model"], colour=valid_data["colour"], license_plate=valid_data["license_plate"])
         car.save()
         return car
+
 
 class TripSerializer(serializers.ModelSerializer):
     """

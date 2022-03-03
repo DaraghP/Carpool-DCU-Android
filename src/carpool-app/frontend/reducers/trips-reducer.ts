@@ -1,5 +1,5 @@
 /**
-* Currently used for storing users current trip info/setup
+* Used for storing users current trip info/setup
 */
 
 import {createAction, createSlice} from "@reduxjs/toolkit";

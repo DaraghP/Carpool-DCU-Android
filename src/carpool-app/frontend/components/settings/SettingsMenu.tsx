@@ -6,11 +6,14 @@ import {updateUserState} from "../../reducers/user-reducer";
 import {resetTripState} from "../../reducers/trips-reducer";
 import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../../reducers/collapsibles-reducer";
 
+// SettingsMenu component
 function SettingsMenu({ navigation }) {
     const dispatch = useAppDispatch();
     let backendURL = useAppSelector(state => state.globals.backendURL);
     const user = useAppSelector(state => state.user);
 
+    // logout function to log user out of their account.
+    // sends request to backend /logout URL, and resets user redux data to log them out
     const logout = () => {
         fetch(`${backendURL}/logout`, {
             method: "GET",
@@ -37,6 +40,8 @@ function SettingsMenu({ navigation }) {
     return (
         <View style={styles.container}>
             <ScrollView keyboardShouldPersistTaps={"handled"}>
+
+                {/* Profile component at top of screen */}
                 <Profile uid={user.id} mode="bar" logoutBtn={false}/>
 
                 <TouchableOpacity style={styles.settingsButton} onPress={() => {navigation.navigate("Account")}}>
@@ -44,7 +49,7 @@ function SettingsMenu({ navigation }) {
                         <Text>Account Info</Text>
                     </View>
                 </TouchableOpacity>
-                {/*  */}
+
                 <TouchableOpacity style={{...styles.settingsButton}} onPress={() => {logout()}}>
                     <View>
                         <Text>Logout</Text>

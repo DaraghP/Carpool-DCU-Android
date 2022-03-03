@@ -8,7 +8,7 @@ import { useAppDispatch, useAppSelector, createLocationObj } from "../../hooks";
 import {GOOGLE_API_KEY} from "@env";
 import {heightPercentageToDP} from "react-native-responsive-screen";
 
-
+// Component for creating GoogleAutoCompleteInput bar for entering/selecting location.
 const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a waypoint..."}) => {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
@@ -20,7 +20,8 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
         markerRef.current?.setAddressText(locationObj.marker.description);
     }, [trips.numberOfWaypoints])
 
-
+   // function to delete driver waypoint
+    // rearranges the order of other waypoints
     const deleteWaypoint = (waypoint) => {
         let waypointNum = parseInt(waypoint.key.charAt(waypoint.key.length - 1));
         let tempLocations: any = new Map(Object.entries(trips.locations));
@@ -29,7 +30,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
 
         let tempObj;
         while (waypointNum !== trips.numberOfWaypoints) {
-            // swap locations
+            // if a waypoint is deleted, rearranges the order of waypoints.
             tempObj = tempLocations.get(`waypoint${waypointNum + 1}`);
             tempLocations.set(`waypoint${waypointNum}`, {
                 ...tempObj,
@@ -75,6 +76,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
         dispatch(setNumberOfWaypoints(trips.numberOfWaypoints - 1));
     }
 
+    // sets trip location in redux when a user clicks on a location name from autoCompleteInput
     const handlePlacesResp = (locationObj, data, details) => {
         const id = locationObj.type === "waypoint" ? locationObj.key : locationObj.type;
 
@@ -103,6 +105,7 @@ const CreateGoogleAutocompleteInput = ({locationObjName, placeholder = "Enter a 
     }
 
     return (
+        // imported GooglePlacesAutocomplete component
         <GooglePlacesAutocomplete
             key={locationObj.key}
             ref={markerRef}

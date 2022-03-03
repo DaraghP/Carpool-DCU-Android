@@ -6,6 +6,7 @@ import TripAlertModal from "../components/trip/TripAlertModal";
 import {useEffect, useRef, useState} from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
+// Account Screen
 function AccountScreen({ navigation }) {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user);
@@ -18,7 +19,7 @@ function AccountScreen({ navigation }) {
     const [showPhoneInput, setShowPhoneInput] = useState(false);
 
     const [updatedNumber, setUpdatedNumber] = useState<boolean | undefined>(undefined);
-
+    // restricts certain users from being able to delete their account for user testing.
     const restrictedAccountsForUserTesting = new Set([2, 3, 4]);
 
     useEffect(() => {
@@ -28,6 +29,7 @@ function AccountScreen({ navigation }) {
         }
       }, [])
 
+    // shows system alert, "are you sure?" after pressing delete your account.
     const deleteAlert = () => {
         Alert.alert(
             "Delete Account",
@@ -48,6 +50,8 @@ function AccountScreen({ navigation }) {
         )
     }
 
+    // Makes request to backend /delete API to delete the user's account.
+    // If the account was deleted from Django database, then the user is logged out by setting user.token and username to empty strings.
     const deleteAccount = () => {
         fetch(`${backendURL}/delete`, {
             method: "GET",
@@ -59,6 +63,7 @@ function AccountScreen({ navigation }) {
             body: null
         }).then(response => ({ status: response.status }))
           .then((data) => {
+            // If the response is 200_OK, the account was successfully deleted from backend
             if (data.status === 200) {
                 // navigates back to Login screen once token is an empty string (see App.tsx)
                 dispatch(updateUserState({username: "", token: ""}));
@@ -68,6 +73,7 @@ function AccountScreen({ navigation }) {
           });
     }
 
+    // Sends request to backend /update_phone URL to update a user's phone number
     const updatePhoneNumber = () => {
         console.log(phoneNoText)
         fetch(`${backendURL}/update_phone`, {
@@ -82,13 +88,14 @@ function AccountScreen({ navigation }) {
             .then((res) => {
                 console.log("request completed")
                 if ("phone_number" in res) {
-
+                    // phone number updated successfully in backend
                     if (mounted.current) {
                         dispatch(updateUserState({phoneNumber: phoneNoText}));
                     }
 
                     setErrorType("");
                 } else {
+                    // Invalid phone number, sets errorType state to "phone" which displays error message.
                     console.log("phone")
                     setErrorType("phone");
                 }
@@ -149,6 +156,7 @@ function AccountScreen({ navigation }) {
             </VStack>
 
             <Text alignSelf="center">{'\n'} Date Created: {user.dateCreated}{'\n'}</Text>
+
             <Button width="80%" alignSelf="center" bg={"red.500"} onPress={() => {
                 {!(restrictedAccountsForUserTesting.has(user.id)) ?
                     deleteAlert()

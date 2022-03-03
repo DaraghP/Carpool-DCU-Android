@@ -4,6 +4,8 @@ import AccountScreen from "./Account";
 
 const Stack = createNativeStackNavigator();
 
+// Settings Screen
+// navigates to either SettingsMenu component, or Account Screen.
 function SettingsScreen({ navigation }) {
 
     return (

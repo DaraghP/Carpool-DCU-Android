@@ -1,17 +1,14 @@
 import {View} from "react-native";
-import {Button, Heading, Text, Box, HStack, VStack, ScrollView} from "native-base";
-import {v4} from "uuid";
+import {Button, Heading, Text, Box, HStack, VStack} from "native-base";
 import {getDatabase, get, ref, remove, update} from "firebase/database";
 import {removeFirebaseTrip, useAppDispatch, useAppSelector, timedate} from "../../hooks";
-import {resetTripState, setDistance} from "../../reducers/trips-reducer";
 import {updateStatus} from "../../reducers/user-reducer";
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import TripAlertModal from "./TripAlertModal";
-import Profile from "../user/Profile";
-import {heightPercentageToDP} from "react-native-responsive-screen";
 import TripPassengers from "./TripPassengers";
 
-
+// Driver Current Trip component
+// Displays information to driver about their trip
 function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) {
     const db = getDatabase();
     const dispatch = useAppDispatch();
@@ -26,9 +23,10 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
 
     const [isCancelTripPressed, setIsCancelTripPressed] = useState(false);
 
-    // cancel
+    // Function for driver to  cancel trip
+    // sends post request to backend /remove_trip URL to remove trip from Django database
+    // If the response is 200_OK, then deletes the trip from firebase database also, and sets user's state to "available"
     const cancelTrip = () => {
-        // alert "are you sure" then delete from db
         fetch(`${backendURL}/remove_trip`, {
             method: "POST",
             headers: {
@@ -47,7 +45,9 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
     }
 
 
-    // driver end trip
+    // Function for driver to end trip after completing trip.
+    // sends request to backend /end_trip URL.
+    // also deletes trip from firebase database.
     const endTrip = () => {
         fetch(`${backendURL}/end_trip`, {
             method: "POST",
@@ -72,7 +72,6 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
     return (
              <View style={{backgroundColor: "grey"}}>
                 <Box mb={1}>
-                    {/* <Heading borderBottomColor="white" borderBottomRadius="2" color="white" mb={2}> */}
                     <Heading color="muted.100" marginX={0} padding={2}  size="lg" bg="muted.800">
                         Your Current Trip</Heading>
                     <Box bg="red" style={{elevation: 999}} marginX={3} mt={1} mb={2}>
@@ -87,8 +86,7 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                     </Box>
 
                     <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
-                    {/* */}
-                    {/* */}
+
                     <Box mt={2} bg="blue" marginX={3} mb={2}>
                         <HStack space={"30%"}>
                             <VStack>
@@ -117,7 +115,7 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                      <Text color="white">Total Duration:{"  "}{trips.duration}</Text>
                  </Box>
 
-
+                 {/*  Hide/Show buttons if trip has departed */}
                  {isTripDeparted ?
                      <Button onPress={() => {endTrip()}}>
                          Trip Complete
@@ -148,6 +146,7 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                     </>
                  }
 
+                    {/* Shows "Are you sure?" modal, when driver presses cancel trip */}
                     {isCancelTripPressed &&
                         <TripAlertModal
                             headerText="Are you sure you want to Cancel Trip?"

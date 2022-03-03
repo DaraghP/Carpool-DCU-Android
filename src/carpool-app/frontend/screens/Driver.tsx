@@ -7,7 +7,7 @@ import {FormControl, Input} from "native-base";
 import {updateRole, resetTripState} from "../reducers/trips-reducer";
 import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 
-
+// Driver Screen
 function DriverScreen({navigation}) {
     const dispatch = useAppDispatch();
     const backendURL = useAppSelector(state => state.globals.backendURL);
@@ -26,6 +26,9 @@ function DriverScreen({navigation}) {
     const [colourText, setColourText] = useState("");
     const [licensePlateText, setLicensePlateText] = useState("");
 
+    // Makes a request to backend /get_driver URL to check if the driver already exists in django database
+    // If the driver does not exist yet, they are shown a form to input their car details.
+    // If the driver already exists, they are shown the normal driver screen.
     useEffect(() => {
         if (user.status === "available") {
             dispatch(resetTripState());
@@ -51,13 +54,16 @@ function DriverScreen({navigation}) {
         })
     }, [])
 
-
+    // resets driver trip once their status is set to "available"
+    // used when for resetting trip data when switching between passenger and driver screens
     useEffect(() => {
         if (user.status === "available") {
             dispatch(resetTripState());
         }
     }, [trips.role])
 
+    // makes request to backend /create_driver url, with car details from form data
+    // If driver was created successfully in Django database, it hides the form from user and displays normal driver screen.
     const createDriver = () => {
         fetch(`${backendURL}/create_driver`, {
             method: "POST",
@@ -96,6 +102,7 @@ function DriverScreen({navigation}) {
                 </Center>
             }
 
+            {/* Car details form, for new drivers  */}
             {getDriverRequestFinished && !hasCreatedDriverRole &&
                 <ScrollView keyboardShouldPersistTaps={"handled"}>
                     <VStack space={"5"} margin="5" alignItems="center">
@@ -135,6 +142,7 @@ function DriverScreen({navigation}) {
                 </ScrollView>
             }
 
+            {/* Normal trip screen if driver exists in Django database */}
             {getDriverRequestFinished && hasCreatedDriverRole &&
                 <TripScreen/>
             }

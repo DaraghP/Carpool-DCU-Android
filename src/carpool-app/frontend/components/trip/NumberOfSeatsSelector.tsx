@@ -4,6 +4,7 @@ import {Icon, Select} from "native-base";
 import {v4} from "uuid";
 import {useAppDispatch, useAppSelector} from "../../hooks";
 
+// Component for driver to select the number of seats for their trip.
 function NumberOfSeatsSelector({}) {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user);

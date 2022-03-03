@@ -1,16 +1,15 @@
 import {Heading, Text, Button, Box, HStack, VStack} from "native-base";
-import {View, Linking, TouchableOpacity} from "react-native";
+import {View} from "react-native";
 import {updateUserState} from "../../reducers/user-reducer";
 import {resetTripState} from "../../reducers/trips-reducer";
 import {removeFirebaseTrip, useAppDispatch, useAppSelector, timedate} from "../../hooks";
-import {get, getDatabase, ref, remove, update} from "firebase/database";
-import {v4} from "uuid";
+import {getDatabase, ref, remove, update} from "firebase/database";
 import {useEffect, useState} from "react";
 import TripAlertModal from "./TripAlertModal";
-import Profile from "../user/Profile";
 import TripPassengers from "./TripPassengers";
 
-
+// Component to show information about the passengers current trip.
+// Used in TripScreen but only shows if user is a passenger in an active trip.
 function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCampusSelected, isTripDeparted}) {
     const db = getDatabase();
     const dispatch = useAppDispatch();
@@ -24,12 +23,19 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
         "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland": "DCU St.Pat's"
     };
 
+    // updates firebase
+    // removes the user from firebase database, and updates the passengers and the number of available seats for trip in firebase
+    // this function is called in the leaveTrip function below (line 38)
     const passengerCancelTrip = async (availableSeats) => {
         await remove(ref(db, `/users/${user.id}`));
         await remove(ref(db, `/trips/${trips.id}/passengers/${user.id}`));
         await update(ref(db, `/trips/${trips.id}`), {["/availableSeats"]: availableSeats})
     }
 
+    // function for passenger to leave current trip
+    // sends request to backend /passenger_leave_trip url, to delete passenger from django database
+    // then deletes passenger from firebase trip
+    // this is executed when passenger presses the leave trip button at the bottom of screen
     const leaveTrip = () => {
         fetch(`${backendURL}/passenger_leave_trip`, {
             method: "GET",
@@ -57,8 +63,9 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
             })
     }
 
-
-
+    // this creates a listener, that starts listening when driver presses start trip.
+    // every 5 minutes it gets the current time, and compares it to the drivers ETA.
+    // if the drivers ETA has passed more than one hour ago, it automatically ends the trip for all passengers and drivers.
     useEffect(() => {
         if (isTripDeparted) {
             const interval = setInterval(() => {
@@ -98,7 +105,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
 
     }, [isTripDeparted])
 
-
+    // only shows passenger trip information, if passenger is currently in a trip.
     return (
         (trips.role === "passenger" && user.tripRequestStatus === "" && user.tripStatus === "in_trip" && !filteredTrips.has(trips.id) ?
             <View style={{backgroundColor: "grey"}}>
@@ -121,6 +128,8 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
 
 
                 <Box mt={2} bg="blue" marginX={3} mb={2}>
+
+                    {/* Shows personalised times for each passenger in the trip */}
                     <HStack space={"30%"}>
                         <VStack>
                             <Text color="white">Departure Time:</Text>
@@ -137,6 +146,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                 <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
 
                 <Box m={3}>
+                    {/* Component shows passengers in a horizontal scrollable container */}
                     <TripPassengers passengers={trips.passengers}/>
                 </Box>
                 <Text marginX={3} color="white">{trips.availableSeats} Available seats</Text>
@@ -152,6 +162,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                 <Text color="white">Driver's Car:{"    "}{trips.car["colour"]} {trips.car["make"]} {trips.car["model"]}</Text>
               </Box>
 
+                {/* Only shows leave trip button if trip has not departed yet */}
                 {!isTripDeparted ?
                     <Button colorScheme="red" size="lg" onPress={() => {
                         setIsLeaveTripPressed(true);
@@ -163,6 +174,7 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                     <Text>Driver has departed</Text>
                 }
 
+                {/* Modal pops up when passenger presses leave trip*/}
                 {isLeaveTripPressed &&
                     <TripAlertModal
                         headerText="Are you sure you want to leave this trip?"

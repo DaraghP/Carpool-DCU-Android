@@ -5,6 +5,7 @@ import {updateTripState} from "../../reducers/trips-reducer";
 import {useAppDispatch, useAppSelector} from "../../hooks";
 import {View} from "react-native";
 
+// Component for passenger cancel request button
 function PassengerCancelRequestButton({setPreviousTripID}) {
     const db = getDatabase();
     const dispatch = useAppDispatch();
@@ -19,6 +20,9 @@ function PassengerCancelRequestButton({setPreviousTripID}) {
                 <Heading color="white" size="md" alignSelf="center" mt="3" mb="1.5">Request Sent to "{trips.driverName}"</Heading>
                 <Heading color="white" size="md" alignSelf="center" paddingTop="1.5" borderTopColor="white" borderTopWidth="0.5">Awaiting Response from Driver</Heading>
                 <Spinner padding="3" size="lg"/>
+
+                {/* cancel trip request button.
+                deletes request from firebase database and resets passengers trip state */}
                 <Button
                         mt="2"
                         colorScheme="red"

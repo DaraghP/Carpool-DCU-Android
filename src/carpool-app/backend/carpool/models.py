@@ -41,8 +41,7 @@ class Trip(models.Model):
     route = models.JSONField(default=dict)
     passengers = models.JSONField(default=dict)
     available_seats = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    # TODO: constraints
-    
+
 
 class Car(models.Model):
     id = models.AutoField(primary_key=True)
@@ -50,8 +49,3 @@ class Car(models.Model):
     model = models.CharField(max_length=150)
     colour = models.CharField(max_length=150)
     license_plate = models.CharField(max_length=150)
-
-
-class Constraints(models.Model):
-    id = models.AutoField(primary_key=True)
-

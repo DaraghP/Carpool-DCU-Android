@@ -1,7 +1,7 @@
 import {Marker} from "react-native-maps";
-import {v4} from "uuid";
 import {useAppSelector} from "../../hooks";
 
+// Component creates markers for each location in trip.
 function MapMarkers() {
     const trips = useAppSelector(state => state.trips);
 

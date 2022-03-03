@@ -7,6 +7,7 @@ import {updateUserState} from "../../reducers/user-reducer";
 import {resetTripState} from "../../reducers/trips-reducer";
 import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../../reducers/collapsibles-reducer";
 import {useAppDispatch, useAppSelector} from "../../hooks";
+import {widthPercentageToDP} from "react-native-responsive-screen";
 
 function ProfileBar({showUserModal, setShowUserModal, profileData, logoutBtn}) {
     const dispatch = useAppDispatch();
@@ -38,27 +39,30 @@ function ProfileBar({showUserModal, setShowUserModal, profileData, logoutBtn}) {
     //
     return (
         <Box padding="5" bg="muted.100" borderBottomWidth={1} borderBottomColor={"muted.500"}>
-            <HStack space={3} alignItems="center">
-                <ProfileIcon setShowUserModal={(value) => {setShowUserModal(value)}}/>
-                <VStack paddingRight={5} marginRight={5}>
-                    <HStack space={1} alignItems="center">
-                        <Heading size="md">{profileData?.username}</Heading>
+            <VStack>
 
-                        <HStack alignItems="center">
-
-                            <TouchableOpacity onPress={() => {setShowUserModal(true)}}>
-                                <Icon color="muted.500" size={6} as={Ionicons} name="create-outline"/>
-                            </TouchableOpacity>
-
+                <HStack space={3} alignItems="center">
+                    <ProfileIcon setShowUserModal={(value) => {setShowUserModal(value)}}/>
+                    <VStack paddingRight={5} marginRight={5}>
+                        <HStack space={1} alignItems="center">
+                            <VStack>
+                                <HStack>
+                                    <TouchableOpacity onPress={() => {setShowUserModal(true)}}>
+                                        <HStack space={1}>
+                                            <Heading size="md">{profileData?.username}</Heading>
+                                            <Icon color="muted.500" size={6} as={Ionicons} name="create-outline" mr={widthPercentageToDP(30)}/>
+                                            <TouchableOpacity onPress={() => {logout()}} style={{marginLeft: "auto", justifyContent: "flex-end"}}>
+                                                <Box rounded={20} bg="red.500" flexDirection={"row"} justifyContent="flex-end" ml={"auto"} p={1}> Logout </Box>
+                                            </TouchableOpacity>
+                                        </HStack>
+                                    </TouchableOpacity>
+                                </HStack>
+                                <Text color="muted.600" paddingRight={5} numberOfLines={2}>{profileData?.profile_description !== "" ? profileData?.profile_description : "Tell us about yourself..."}</Text>
+                            </VStack>
                         </HStack>
-                    </HStack>
-
-                    <Text color="muted.600" paddingRight={5} numberOfLines={2}>{profileData?.profile_description !== "" ? profileData?.profile_description : "Tell us about yourself..."}</Text>
-                </VStack>
-                <TouchableOpacity onPress={() => {logout()}}>
-                    <Box rounded={20} bg="red.500" flexDirection={"row"} justifyContent="flex-end" ml={"auto"} p={1}>Logout</Box>
-                </TouchableOpacity>
-            </HStack>
+                    </VStack>
+                </HStack>
+            </VStack>
 
         </Box>
     )

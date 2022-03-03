@@ -4,6 +4,8 @@ import {getDatabase, ref, update} from "firebase/database";
 import {useAppDispatch, useAppSelector} from "../../hooks";
 import {resetTripState} from "../../reducers/trips-reducer";
 
+// Component creates alerts to show to passengers when a driver accepts/declines their request.
+// Also creates alert to show to both passengers and drivers when their trip has ended.
 function TripScreenAlertModals({setIsResetAfterTripComplete, setHideMap}) {
     const db = getDatabase();
     const dispatch = useAppDispatch();
@@ -13,6 +15,7 @@ function TripScreenAlertModals({setIsResetAfterTripComplete, setHideMap}) {
 
     return (
         <>
+            {/* If passenger request is accepted by driver, shows accepted alert to passenger*/}
             {trips.role === "passenger" && user.tripRequestStatus === "accepted" && user.tripStatus === "in_trip" &&
                 <TripAlertModal
                     headerText="Trip Alert"
@@ -28,7 +31,7 @@ function TripScreenAlertModals({setIsResetAfterTripComplete, setHideMap}) {
                 />
             }
 
-
+            {/* If passenger request was declined by driver, shows declined alert */}
             {trips.role === "passenger" && user.tripRequestStatus === "declined" &&
               <>
                   <TripAlertModal
@@ -45,6 +48,7 @@ function TripScreenAlertModals({setIsResetAfterTripComplete, setHideMap}) {
               </>
             }
 
+            {/* When tripStatus is set to "trip_complete", shows alert saying trip has ended. */}
             {user.tripStatus == "trip_complete" &&
                 <TripAlertModal
                   headerText="Trip Alert"

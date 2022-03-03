@@ -1,5 +1,5 @@
 /**
-* Currently used for storing user info
+* Used for storing user info
 */
 
 import {createAction, createSlice} from "@reduxjs/toolkit";

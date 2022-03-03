@@ -2,14 +2,15 @@ import CreateGoogleAutocompleteInput from "./CreateGoogleAutocompleteInput";
 import {v4} from "uuid";
 import {useAppDispatch, useAppSelector} from "../../hooks";
 import Collapsible from "react-native-collapsible";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {Button, Divider, Heading, HStack, Icon, VStack, Text} from "native-base";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import NumberOfSeatsSelector from "./NumberOfSeatsSelector";
-import DepartureTimePicker from "./DepartureTimePicker";
 import CampusDirectionSelector from "./CampusDirectionSelector";
-import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../../reducers/collapsibles-reducer";
+import {showWaypoints} from "../../reducers/collapsibles-reducer";
 
+// LocationInputGroup for showing To/From DCU buttons at top of Trip
+// Shows campus selector after pressing either TO or FROM
+// Shows GoogleAutoCompleteInput once user has selected a campus
 function LocationInputGroup({isTripToDCU, setIsTripToDCU, campusSelected, setCampusSelected, increaseWaypoints}) {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user);
@@ -24,7 +25,7 @@ function LocationInputGroup({isTripToDCU, setIsTripToDCU, campusSelected, setCam
     return (
         <>
 
-            {((!trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) && !showWaypointCollapsible) &&
+            {(!showWaypointCollapsible && (!trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) || (trips.locations.startingLocation.info.isEntered || !trips.locations.destLocation.info.isEntered) && !showWaypointCollapsible) &&
                 <CampusDirectionSelector
                     campusSelected={campusSelected}
                     setCampusSelected={(value: string) => {setCampusSelected(value)}}

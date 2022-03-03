@@ -31,7 +31,7 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True 
 
-ALLOWED_HOSTS = ["e0ba-46-7-17-96.ngrok.io", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["blooming-shelf-28383.herokuapp.com", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -126,9 +126,6 @@ USE_TZ = True
 #
 #
 REST_FRAMEWORK = {
-     #'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
-     #],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication'
     ]

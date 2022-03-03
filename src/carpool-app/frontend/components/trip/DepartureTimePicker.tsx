@@ -5,6 +5,7 @@ import {useEffect, useState} from "react";
 import {useAppDispatch, useAppSelector, timedate} from "../../hooks";
 import {Button, Text} from "native-base";
 
+// Component to Select Departure Time for a trip.
 function DepartureTimePicker() {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips);
@@ -13,6 +14,8 @@ function DepartureTimePicker() {
     const [isTimeSelected, setIsTimeSelected] = useState(false);
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
 
+    // Gets updated current time every 5 minutes
+    // used in DateTimePickerModal below to ensure time of departure is in the future
     useEffect(() => {
       const setTimeInterval = setInterval(() => {
           let date = new Date();
@@ -41,6 +44,7 @@ function DepartureTimePicker() {
                   </Text>
               </Button>
 
+              {/* displays error modal if time selected is in the past. */}
               {showTimeAlertModal &&
                   <TripAlertModal
                       headerText={"Time Selection Error"}
@@ -56,7 +60,9 @@ function DepartureTimePicker() {
                       }
                   />
               }
-
+              {/* imported DateTimePickerModal, when a user selects a time, checks if time is in the past.
+                    If time is in the future, sets departure time.
+               */}
               <DateTimePickerModal
                   mode="datetime"
                   date={dateToday}

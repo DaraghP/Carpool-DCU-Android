@@ -3,8 +3,8 @@ import {StyleSheet, TouchableOpacity} from "react-native";
 import {resetTripState, setLocations} from "../../reducers/trips-reducer";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {createLocationObj, useAppDispatch} from "../../hooks";
-import {useEffect} from "react";
 
+// Component for selecting campus buttons and To/From DCU buttons at top of Trip Screen
 function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU, setIsTripToDCU}) {
     const dispatch = useAppDispatch();
 
@@ -45,8 +45,6 @@ function CampusDirectionSelector({campusSelected, setCampusSelected, isTripToDCU
                     >
                         <Icon ml="2" as={Ionicons} name="arrow-back-outline"/>
                     </TouchableOpacity>
-
-                    {/* <Text>Select a campus:</Text> */}
 
                     <Button.Group isAttached={false} alignSelf="center" alignItems="center" justifyContent="center">
                         <Button

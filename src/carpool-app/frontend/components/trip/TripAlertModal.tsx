@@ -1,5 +1,6 @@
 import {Button, Modal, Text, HStack} from "native-base";
 
+// Component to create an alert modal by sending in props.
 function TripAlertModal({headerText, bodyText, btnAction, otherBtnAction = false}) {
 
     return (

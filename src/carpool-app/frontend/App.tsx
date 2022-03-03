@@ -7,6 +7,7 @@ import Index from "./index";
 
 LogBox.ignoreLogs(["Setting a timer"]);
 
+// Firebase setup
 const firebaseConfig = {
   apiKey: FIREBASE_API_KEY,
   authDomain: "ca326-carpool-app-firebase.firebaseapp.com",
@@ -20,7 +21,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export default function App() { //
+export default function App() {
   return (
     <Provider store={store}>
       <Index/>

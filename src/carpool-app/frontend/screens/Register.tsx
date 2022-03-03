@@ -1,11 +1,12 @@
-import {SafeAreaView, ScrollView, StyleSheet, Text, View} from "react-native";
-import {Stack, Button, Center, FormControl, Heading, Input, VStack, Box} from "native-base";
+import {SafeAreaView, ScrollView, StyleSheet} from "react-native";
+import {Button, FormControl, Heading, Input, VStack, Box} from "native-base";
 import {useRef, useEffect, useState} from "react";
 import {updateUserState} from "../reducers/user-reducer";
 import {useAppDispatch, useAppSelector} from "../hooks";
-import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
+import {widthPercentageToDP} from "react-native-responsive-screen";
 import Password from "../components/auth/Password";
 
+// Registration Screen
 function RegisterScreen({ navigation }) {
   const dispatch = useAppDispatch();
   const mounted = useRef(true);
@@ -27,12 +28,15 @@ function RegisterScreen({ navigation }) {
   const [errorType, setErrorType] = useState("");
   const [errorText, setErrorText] = useState("");
 
+  // used to prevent memory leak by unmounting after use.
   useEffect(() => {
     return () => {
         mounted.current = false;
     }
   }, [])
 
+    // register() function called when passenger presses register button
+    // sends POST request to backend /register URL, which either creates user or returns error.
   const register = () => {
       fetch(`${backendURL}/register`, {
       method: "POST",
@@ -51,7 +55,7 @@ function RegisterScreen({ navigation }) {
             passwordInput.current.clear();
             reEnterPasswordInput.current.clear(); 
 
-            // prevents memory leak
+            // prevents memory leak by ensuring component is mounted
             if (mounted.current) {
                 dispatch(updateUserState({id: res.id, username: res.username, firstName: firstNameText, lastName: surnameText, token: res.token, phoneNumber: res.phone_no}));
             }
@@ -68,6 +72,7 @@ function RegisterScreen({ navigation }) {
     });
   };
 
+  // Registration form
   return (
       <SafeAreaView style={styles.container}>
           <ScrollView style={{width: widthPercentageToDP(100)}} keyboardShouldPersistTaps={"handled"}>

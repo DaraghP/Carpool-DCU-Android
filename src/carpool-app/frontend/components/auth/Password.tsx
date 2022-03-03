@@ -3,6 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {TouchableOpacity} from "react-native";
 import {useState} from "react";
 
+// Password component to show/hide password text in form
 function Password({passwordRef, onChangeText}) {
     const [showPassword, setShowPassword] = useState(false);
 

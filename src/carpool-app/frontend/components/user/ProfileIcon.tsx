@@ -2,6 +2,7 @@ import {TouchableOpacity} from "react-native";
 import {Avatar, Icon} from "native-base";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
+// ProfileIcon component to show profile avatar and active symbol
 function ProfileIcon({setShowUserModal, style = {}}) {
     return (
         <TouchableOpacity onPress={() => {setShowUserModal(true)}}>

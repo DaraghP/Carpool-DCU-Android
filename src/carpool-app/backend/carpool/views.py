@@ -1,5 +1,4 @@
 import json
-from collections import namedtuple
 
 import requests
 from datetime import timedelta, datetime
@@ -62,7 +61,8 @@ def login(request):
     Users will send login data on the app.
 
     If login data is valid, the user's data is sent back.
-    Otherwise, if invalid, an appropriate error message is sent back.
+    If the user is currently in a trip (driver/passenger) the trip data is also sent back.
+    Otherwise, if login data is invalid, an appropriate error message is sent back.
     """
 
     if request.method == "POST":
@@ -70,10 +70,11 @@ def login(request):
         password = request.data.get("password")
         if name and password:
             carpool_user = authenticate(username=name, password=password)
+            # if login details were validated
             if carpool_user is not None:
                 django_login(request, carpool_user)
                 token, created = Token.objects.get_or_create(user=carpool_user)
-
+                # calculates user's current trip if they are in one and sends the data as response.
                 trip = {}
                 user_status = "available"
                 passenger_route = {} 
@@ -85,10 +86,17 @@ def login(request):
                     if carpool_user.id == carpool_user.current_trip.driver_id.uid.id:
                         user_status = "driver_busy"
                     else:
+                        """
+                        If user is a passenger in a trip
+                        gathers their personalised trip information including personalised times and locations and sends in response.
+                        This is used in frontend to show each passenger their personalised departure/arrival times
+                        """
+
                         user_status = "passenger_busy"
                         passenger_info = trip["passengers"][f"passenger{carpool_user.id}"]
 
-                        dcu_campuses = ["Dublin City University, Collins Ave Ext, Whitehall, Dublin 9", "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"]
+                        dcu_campuses = ["Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
+                                        "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"]
                         # If trip is TO DCU
                         if trip["start"]["name"] not in dcu_campuses:
                             passenger_loc = passenger_info["passengerStart"]
@@ -133,7 +141,7 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def logout(request):
     """
-    Users can logout through the settings menu.
+    Users can log out through the settings menu.
     Users send their auth token to be destroyed then we send back a 200 response to signal React Native to go back to
     the login and registration screens.
     """
@@ -153,6 +161,7 @@ def delete_account(request):
 
     request.user.delete()
     return Response(status=status.HTTP_200_OK)
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -175,7 +184,7 @@ def set_profile_description(request):
 @permission_classes([IsAuthenticated])
 def get_profile(request):
     """
-    Gets profile of a user
+    Gets profile data of a user
     """
 
     if request.method == "POST": 
@@ -195,6 +204,10 @@ def get_profile(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_phone(request):
+    """
+    Updates phone number of the user who has requested if validated
+    """
+
     user = CarpoolUser.objects.get(id=request.user.id)
     new_phone_no = str(request.data.get("phoneNumber"))
 
@@ -218,7 +231,7 @@ def update_phone(request):
 def get_driver(request):
     """
     Gets driver, if they exist, their details are sent back in the response,
-    otherwise it returns status 404.
+    otherwise it returns status 404. Used to determine whether the user has ever been a driver.
     """
     return Response({"driver_exists": Driver.objects.filter(uid=request.user.id).exists()}, status=status.HTTP_200_OK)
 
@@ -226,9 +239,9 @@ def get_driver(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_driver(request):
-    """
+    """ 
     Creates driver if they already don't exist, and returns their details,
-    if the driver already exists an error is sent back in the response.    
+    if the driver already exists an error is sent back in the response.
     """
 
     if request.method == "POST":
@@ -246,15 +259,18 @@ def create_driver(request):
             return Response(request.data, status=status.HTTP_201_CREATED)
 
         else:
-            return Response({"error": ""}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Driver not created"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def create_passenger(request):
+    """
+    Creates passenger if they already don't exist
+    """
+
     if Passenger.objects.filter(uid=request.user.id).exists():
-        print("Passenger already exists!")
-        return Response({"error": ""}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "exists"}, status=status.HTTP_404_NOT_FOUND)
     else:
         user = CarpoolUser.objects.get(id=request.user.id)
         name = f"{user.first_name} {user.last_name[0]}."
@@ -262,23 +278,20 @@ def create_passenger(request):
         passenger = PassengerSerializer(data=passenger_data)
         passenger.create(passenger_data)
 
-        print("New Passenger:", name)
         return Response(status=status.HTTP_201_CREATED)
-
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_trip(request):
     """
-    Creates trip for driver, for the passengers to search for. 
+    Creates trip for driver, which passengers can search for.
     """
 
     if request.method == 'POST': 
         if request.user.status == "available":
             driver = Driver.objects.get(uid=request.user.id)
-            print({"driver_id": driver, **request.data})
-            trip = TripSerializer({"driver_id": driver, **request.data})
 
+            trip = TripSerializer({"driver_id": driver, **request.data})
             trip = trip.create({"driver_id": driver, **request.data}) 
             
             request.user.current_trip = trip
@@ -294,7 +307,9 @@ def create_trip(request):
 @permission_classes([IsAuthenticated])
 def remove_trip(request):
     """
-    Removes drivers trip
+    Driver sends this request to cancel/end their current trip.
+    This sets the driver and all passengers statuses to "available" and removes their current_trip.
+    It returns a list of user ids of all the people who were in the trip, which is used in frontend to remove from Firebase database also.
     """
 
     if request.method == "POST":
@@ -304,7 +319,7 @@ def remove_trip(request):
             people = CarpoolUser.objects.filter(current_trip=trip.id)
 
             ids_list = []
-            for user in people:
+            for user in people:  # remove trip for all users involved in the trip
                 ids_list.append(user.id)
                 user.status = "available"
                 user.current_trip = None
@@ -320,8 +335,14 @@ def remove_trip(request):
 @permission_classes([IsAuthenticated])
 def get_trips(request):
     """
-    Used by passengers to search for trips
+    Used by passengers to search for trips.
+    Takes in passenger locations from request.
+    Checks if passenger is going to or from DCU, and only filters from those specific trips.
+
+    Uses Google Distance API to get route info for each trip after adding passenger to waypoints, using get_route_details.
+    Sends back list of trips in order of the ETA they would have if passenger joined them.
     """
+
     dcu_campuses = {
         "gla": "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
         "pat": "DCU St Patrick's Campus, Drumcondra Road Upper, Drumcondra, Dublin 9, Ireland"
@@ -354,8 +375,6 @@ def get_trips(request):
             elif (request.data["destination"]["name"] in dcu_campuses.values()) \
                     and (trip.destination["name"] in dcu_campuses.values()):
                 updated_trip = get_route_details(trip, request.data["start"]["name"])
-
-            print("new eta", updated_trip.ETA)
 
             final_list.append(updated_trip)
 
@@ -395,7 +414,13 @@ def join_trip(request):
             trip_dict["car"] = model_to_dict(trip.driver_id.car)
             trip_dict["driverName"] = f"{trip.driver_id.uid.first_name} {trip.driver_id.uid.last_name}."
             passenger_route = {}
-            # If passenger in a trip, gets passenger_route info
+
+            """
+            If user is a passenger in a trip
+            gathers their personalised trip information including personalised times and locations and sends in response.
+            This is used in frontend to show each passenger their personalised departure/arrival times
+            """
+
             if request.user.status == "passenger_busy":
                 passenger_info = trip_dict["passengers"][f"passenger{request.user.id}"]
                 dcu_campuses = ["Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
@@ -430,6 +455,11 @@ def join_trip(request):
 
 
 def get_route_details(trip, passenger_location="", passenger_secondary_location=""):
+    """
+    Used to get route details such as total distance, total duration, ETA, optimal waypoint order of a route.
+    This is used whenever a user requests map data.
+    """
+
     if len(trip.waypoints) < 1:
         waypoints = ""
     else:
@@ -442,28 +472,34 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         safe='=?:/&'
     )
 
+
     previous_waypoint_order = {}
     wp_list = list(trip.waypoints.values())
     
     i = 0
     while i < len(wp_list):
+        """
+        A issue with Google Directions API is that it automatically converts the address names, 
+        here we solve this by preserving the previous waypoint order names and use the new waypoint order to get back 
+        the new waypoint order with preserved names as they were before the API request below.
+        """
         previous_waypoint_order[i] = wp_list[i]["name"]
         i += 1
     
     if passenger_location != "":
         previous_waypoint_order[i] = passenger_location
 
-    print("NEWDICT : ", previous_waypoint_order)
-
     response = requests.get(directions_url)
 
     waypoint_order = response.json()["routes"][0].get("waypoint_order")
-    print("ORDER ->", waypoint_order)
 
     distance_calculation = 0
     duration_calculation = 0
     departure_time = datetime.timestamp(trip.time_of_departure)
     route = []
+    # Gets the distance and duration between each waypoint in the trip.
+    # Also gets the departure time and arrival time to destination/from start.
+    # This data is used by frontend to display personalised ETA / Departure times to each passenger in trip.
     for leg in response.json()["routes"][0]["legs"]:
         arrival_time = departure_time + int(leg["duration"]["value"])
         waypoint_info = {
@@ -487,17 +523,15 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
         # shows distance & duration between waypoints
         route.append(waypoint_info)
 
-    print("\nBEFORE:\n", route)
-    new_route = []
+    # gets the order of the waypoints based on response from Directions API.
     route[0]["start"] = trip.start["name"]
     i = 0
     while i < len(route) - 1:
         route[i]["destination"] = previous_waypoint_order[waypoint_order[i]]
-        route[i+1]["start"] = previous_waypoint_order[waypoint_order[i]]
-        i+=1
+        route[i + 1]["start"] = previous_waypoint_order[waypoint_order[i]]
+        i += 1
+
     route[-1]["destination"] = trip.destination["name"]
-    
-    print("\nAFTER\n", route)
 
     trip_time = timedelta(seconds=duration_calculation)
     eta = trip.time_of_departure + trip_time
@@ -522,6 +556,11 @@ def get_route_details(trip, passenger_location="", passenger_secondary_location=
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_passenger_to_trip(request):
+    """
+    Request sent by Driver to add passenger to a trip if they have no ongoing trips.
+    Updates driver trip data such as waypoints, passengers, available_seats.
+    Also calls get_route_details to get new ETA/departure times for all other passengers and driver.
+    """
 
     dcu_campuses = {
         "gla": "Dublin City University, Collins Ave Ext, Whitehall, Dublin 9",
@@ -529,7 +568,6 @@ def add_passenger_to_trip(request):
     }
 
     if request.method == "POST":
-        print("Adding passenger to trip...")
         passenger_start = request.data["passengerData"]["passengerStart"]
         passenger_dest = request.data["passengerData"]["passengerDestination"]
         trip_id = request.data.get("tripID")
@@ -572,9 +610,7 @@ def add_passenger_to_trip(request):
                     trip.passengers[f"passenger{passenger_user.id}"]["passengerDestination"] = trip.destination["name"]
 
                 trip.available_seats -= 1
-                print("BEFORE:", trip.waypoints)
                 route_details = get_route_details(trip)
-                print("AFTER:", route_details.waypoints)
                 trip_data = model_to_dict(route_details)
 
                 passenger_user.save()
@@ -589,13 +625,16 @@ def add_passenger_to_trip(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def end_trip(request):
+    """
+    Used by driver to end a trip
+    """
     if request.method == "POST":
         trip_id = request.data.get("tripID")
         if Trip.objects.filter(id=trip_id).exists():
             people = CarpoolUser.objects.filter(current_trip=trip_id)
 
             ids_list = []
-            for user in people:
+            for user in people:  # removes any passengers involved in the trip
                 ids_list.append(user.id)
                 user.status = "available"
                 user.current_trip = None
@@ -611,6 +650,12 @@ def end_trip(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def passenger_leave_trip(request):
+    """
+    Used by passengers to leave trip if they are in one.
+    Updates driver trip data such as waypoints, passengers, available_seats.
+    Also calls get_route_details to get new ETA/departure times for all other passengers and driver.
+    """
+
     if request.method == "GET":
         passenger = request.user
         if passenger.current_trip is not None:
@@ -633,7 +678,6 @@ def passenger_leave_trip(request):
 
                 temp_waypoints_dict = {**trip.waypoints}
                 if int(passenger["passengerID"]) == request.user.id:
-                    print("Remove passenger: ", request.user.id)
                     temp_passengers_dict.pop(key)
                     passenger_start = passenger["passengerStart"]
                     passenger_destination = passenger["passengerDestination"]
@@ -658,6 +702,6 @@ def passenger_leave_trip(request):
             passenger.save()
             return Response({"status": "Passenger removed from trip.", "available_seats": trip.available_seats}, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "Passenger does not have an active trip."}, status=status.HTTP_204_NO_CONTENT)
+            return Response({"error": "Passenger does not have an active trip."}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(status=status.HTTP_400_BAD_REQUEST)

@@ -3,6 +3,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {TouchableOpacity, TouchableWithoutFeedback, View} from "react-native";
 import {useAppSelector} from "../../hooks";
 
+// ProfileModal component to show a modal of any given users profile.
+// uid is sent as a prop indicating which users profile to get.
 function ProfileModal({uid, showPhoneNumber, showUserModal, setShowUserModal, setUserDescriptionText, editDescription, setEditDescription, profileData, setProfileDescription, userDescriptionText}) {
     const user = useAppSelector(state => state.user);
 

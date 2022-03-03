@@ -1,87 +1,29 @@
-import {
-    StyleSheet,
-    View,
-    ScrollView,
-    SafeAreaView,
-    TouchableOpacity,
-    Alert as SystemAlert,
-    Dimensions
-} from "react-native";
+import {StyleSheet, View} from "react-native";
 import {useEffect, useRef, useState} from "react";
 import "react-native-get-random-values";
-import {v4} from "uuid";
-import {GOOGLE_API_KEY} from "@env";
-import MapView, { Marker } from "react-native-maps";
-import MapViewDirections from "react-native-maps-directions";
+
 import {updateStatus, updateUserState, updateTripRequestStatus, updateTripStatus} from "../reducers/user-reducer";
-import {
-    setNumberOfWaypoints,
-    setDistance,
-    setDuration,
-    setAvailableSeats,
-    setTimeOfDeparture,
-    updateTripState, resetTripState, setLocations
-} from "../reducers/trips-reducer";
-import {
-    storeTripRequest,
-    setupTripRequestListener,
-    useAppDispatch,
-    useAppSelector,
-    createFirebaseTrip,
-    removeFirebaseTrip, acceptTripRequest, declineTripRequest, createLocationObj,
-} from "../hooks";
-import {
-    Button,
-    Text,
-    Select,
-    Heading,
-    VStack,
-    Flex,
-    Icon,
-    Modal,
-    Alert,
-    HStack,
-    Divider,
-    IconButton,
-    CloseIcon, Box, Collapse, Container, KeyboardAvoidingView
-} from "native-base";
-import CreateGoogleAutocompleteInput from "../components/trip/CreateGoogleAutocompleteInput";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
-import {SwipeablePanel} from "rn-swipeable-panel";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import {
-    getDatabase,
-    onValue,
-    off,
-    ref,
-    update,
-    remove,
-    get
-} from "firebase/database";
+import {setNumberOfWaypoints, setTimeOfDeparture, updateTripState, resetTripState} from "../reducers/trips-reducer";
+import {useAppDispatch, useAppSelector, createFirebaseTrip, createLocationObj} from "../hooks";
+import {Button, Text, Box, KeyboardAvoidingView} from "native-base";
+import {getDatabase, onValue, off, ref} from "firebase/database";
 
 // @ts-ignore
 import getDirections from "react-native-google-maps-directions";
-import TripAlertModal from "../components/trip/TripAlertModal";
-import CampusDirectionSelector from "../components/trip/CampusDirectionSelector";
 import LocationInputGroup from "../components/trip/LocationInputGroup";
-import DepartureTimePicker from "../components/trip/DepartureTimePicker";
 import {shallowEqual} from "react-redux";
 import Map from "../components/trip/Map";
 import TripRequestsModal from "../components/trip/TripRequestsModal";
 import TripPicker from "../components/trip/TripPicker";
 import DriverCurrentTrip from "../components/trip/DriverCurrentTrip";
 import PassengerCancelRequestButton from "../components/trip/PassengerCancelRequestButton";
-import NumberOfSeatsSelector from "../components/trip/NumberOfSeatsSelector";
 import TripScreenAlertModals from "../components/trip/TripScreenAlertModals";
-import Collapsible from "react-native-collapsible";
-import Accordion from "react-native-collapsible/Accordion";
 import NumOfSeatsAndDepartureTimeCollapsible from "../components/trip/NumOfSeatsAndDepartureTimeCollapsible";
 import PassengerCurrentTrip from "../components/trip/PassengerCurrentTrip";
 import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../reducers/collapsibles-reducer";
 
-
-
+// Trip Screen
 function TripScreen() {
     const dispatch = useAppDispatch();
     const trips = useAppSelector(state => state.trips, shallowEqual);
@@ -92,8 +34,6 @@ function TripScreen() {
     const [passengerGotInitialMapData, setPassengerGotInitialMapData] = useState(false);
     const [isResetAfterTripComplete, setIsResetAfterTripComplete] = useState(false);
     const [firebaseTripsVal, setFirebaseTripsVal] = useState({tripID: null, driverID: null, data: {trip: {status: "waiting", passengers: {}}, tripRequests: {}}});;
-    const [tripsFound, setTripsFound] = useState(null);
-    const [isPanelActive, setIsPanelActive] = useState(false);
     const [isPassengerInTrip, setIsPassengerInTrip] = useState<boolean>(false);
     const [previousTripID, setPreviousTripID] = useState(null);
     const [showTripAvailableModal, setShowTripAvailableModal] = useState(false);
@@ -104,7 +44,8 @@ function TripScreen() {
     // firebase db
     const db = getDatabase();
 
-    // for driver only
+    // for driver only used to add waypoint to driver journey
+    // creates new location obj to display on map
     const increaseWaypoints = () => {
         let activeWaypoints = Object.keys(trips.locations).filter((key) => trips.locations[key].marker.description && trips.locations[key].type === "waypoint" && trips.locations[key].info.isEntered)
                                 .map((key) => trips.locations[key].marker.description);
@@ -122,7 +63,9 @@ function TripScreen() {
     }
 
 
-    // for driver only
+    // for driver only, used when they press, create trip
+    // sends POST request with trip data to backend /create_trip URL, which adds trip to Django database.
+    // also creates trip in Firebase database
     const createTrip = () => {
         let waypoints = {};
 
@@ -139,11 +82,7 @@ function TripScreen() {
             initialETA = new Date(trips.timeOfDeparture)
         }
 
-
-        console.log(initialETA)
         initialETA.setSeconds(initialETA.getSeconds() + trips.initialDurationSeconds)
-        console.log(initialETA)
-        console.log("TEST:", initialETA.toLocaleTimeString());
 
         let trip_data = {
             start: {
@@ -168,7 +107,7 @@ function TripScreen() {
         if (trips.timeOfDeparture === "") {
             dispatch(setTimeOfDeparture(new Date().toString()));
         }
-
+        // request to backend
         if (user.status === "available") {
             fetch(`${backendURL}/create_trip`, {
                 method: "POST",
@@ -181,6 +120,7 @@ function TripScreen() {
             }).then(response => response.json())
                 .then(res => {
                     if (!("errorType" in res)) {
+                        // creates trip in Firebase
                         let isFirebaseTripCreated = createFirebaseTrip(user.status, trip_data.available_seats, res.tripID, res.driverID, `${user.firstName} ${user.lastName[0]}.`);
                         if (isFirebaseTripCreated) {
                             dispatch(updateStatus("driver_busy"));
@@ -196,12 +136,13 @@ function TripScreen() {
                 })
         }
     }
-
+    // function used to store trip data from JSON backend response to redux trip data
     const convertTripDataFromJSON = (tripData, passengerRoute) => {
         if (tripData !== undefined) {
 
             let newWaypoints = {};
 
+            // creates waypoint locations
             if (Object.keys(tripData["waypoints"]).length > 0) {
                 Object.keys(tripData["waypoints"]).map((key) => {
                     newWaypoints[key] = createLocationObj(key,
@@ -213,10 +154,10 @@ function TripScreen() {
                     )
                 });
             }
-
+            // stores trip data in redux
             dispatch(updateTripState({
                 ...tripData,
-                ...passengerRoute,
+                ...passengerRoute, // sets pasengerRoute information including personalised times (sent from backend response)
                 locations: {
                     startingLocation: createLocationObj(
                         "startingLocation",
@@ -242,7 +183,9 @@ function TripScreen() {
         }
     }
 
-    // for passenger and driver
+    // used by passenger to get trip information after their request is accepted by driver.
+    // used by passenger and driver to get updated trip information whenever a passenger joins/leaves the trip
+    // sends request to backend /join_trip url
     const getOrJoinTrip = () => {
         fetch(`${backendURL}/join_trip`, {
             method: "GET",
@@ -254,10 +197,10 @@ function TripScreen() {
         }).then(response => response.json())
             .then((res) => {
                 if (!("error" in res)) {
+                    // sets trip information based on response
                     if (res.trip_data !== null) {
                         convertTripDataFromJSON(res.trip_data, res.passenger_route);
                     }
-
                     if (trips.role === "passenger" && !passengerGotInitialMapData) {
                         setIsPassengerInTrip(true);
                         setPassengerGotInitialMapData(true);
@@ -278,6 +221,8 @@ function TripScreen() {
         setPreviousTripID(trips.id);
     }, [])
 
+    // firebase listeners to update trip data in real time
+    // handles trip requests
     useEffect(() => {
         let tempFbTripsVal = {...firebaseTripsVal}
 
@@ -326,7 +271,7 @@ function TripScreen() {
                         }
                     }
                 }
-
+                // stores up to date firebase trip data
                 setFirebaseTripsVal(tempFbTripsVal)
 
                 if (trips.role === "passenger" && typeof snapshot.val() === "object" && snapshot.val() !== null) {
@@ -339,7 +284,8 @@ function TripScreen() {
                 }
             })
 
-
+            // firebase listener
+            // when a new user's status changes in firebase, updates redux appropriately
             onValue(ref(db, `/users/${user.id}/tripRequested`), (snapshot) => {
                 if (!passengerGotInitialMapData) {
                     if (snapshot.val() !== null) {
@@ -368,6 +314,7 @@ function TripScreen() {
         }
     }, [trips.id, previousTripID])
 
+    // if passenger is added to a firebase trip,it makes request to backend to get the trip data
     useEffect(() => {
         if (trips.role === "passenger" && user.tripRequestStatus === "accepted" && !passengerGotInitialMapData) {
             if (firebaseTripsVal.data.trip.passengers !== null) {
@@ -381,12 +328,14 @@ function TripScreen() {
         // else passenger has been denied their request
     }, [user.tripRequestStatus])
 
+    // gets up to date trip info from Django, when a passenger adds or leaves their current trip
     useEffect(() => {
         if ((user.status === "passenger_busy" && passengerGotInitialMapData) || user.status === "driver_busy") {
             getOrJoinTrip();
         }
     }, [firebaseTripsVal.data.trip.passengers])
 
+    // resets trip state when status = "available"
     useEffect(() => {
         if (user.status === "available") {
             dispatch(resetTripState());
@@ -398,6 +347,8 @@ function TripScreen() {
         <KeyboardAvoidingView style={styles.container}>
             {user.status === "available" &&
                 <View>
+
+                    {/* Component for showing To/From DCU buttons at top of screen and entering a location*/}
                     <LocationInputGroup
                         isTripToDCU={isTripToDCU}
                         setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
@@ -409,20 +360,23 @@ function TripScreen() {
             }
 
             <View style={{flex: 1, elevation: -1, zIndex: -1}}>
+                {/* Component to show trip requests */}
                 <TripRequestsModal firebaseTripRequests={firebaseTripsVal.data.tripRequests} previousTripID={previousTripID} setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}/>
 
                 {!hideMap &&
                     <Map/>
                 }
-
+                {/* Component for driver selecting number of seats and departure time */}
                 <NumOfSeatsAndDepartureTimeCollapsible/>
 
+                {/* Create Trip button for driver */}
                 {trips.role === "driver" && user.status !== "driver_busy" && trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered &&
                       <Button onPress={() => {createTrip();}}>
                         <Text color="white">Create Trip</Text>
                       </Button>
                 }
 
+                {/* Component to show current trip info, if driver is in an active trip */}
                 {user.status === "driver_busy" &&
                     <DriverCurrentTrip
                         isTripDeparted={firebaseTripsVal.data.trip.status === "departed"}
@@ -431,6 +385,7 @@ function TripScreen() {
                     />
                 }
 
+                {/* Passenger cancel request button */}
                 {trips.role === "passenger" && user.tripRequestStatus === "waiting" ?
                     <Box style={{ width: "100%", height: "100%", backgroundColor:"#5c5c5c", zIndex: 100, elevation: 100, alignSelf: "center", alignItems:"center", justifyContent:"center"}}>
                         <PassengerCancelRequestButton setPreviousTripID={(value) => {setPreviousTripID(value)}} setHideMap={(value) => {setHideMap(value)}}/>
@@ -438,6 +393,7 @@ function TripScreen() {
                 : null
                 }
 
+                {/* Component to show current trip info, if passenger is in an active trip */}
                 <PassengerCurrentTrip
                     isTripToDCU={isTripToDCU}
                     setIsTripToDCU={(value) => {setIsTripToDCU(value)}}
@@ -446,9 +402,11 @@ function TripScreen() {
                     isTripDeparted={firebaseTripsVal.data.trip.status === "departed"}
                 />
 
+                {/* Component to show/hide alert modals */}
                 <TripScreenAlertModals setIsResetAfterTripComplete={(value) => {setIsResetAfterTripComplete(value)}} setHideMap={(value) => {setHideMap(value)}}/>
             </View>
 
+            {/* Component showing list of trips for Passenger after pressing show trips*/}
             <TripPicker
                  setPreviousTripID={(prevID) => {setPreviousTripID(prevID)}}
                  filteredTrips={filteredTrips}

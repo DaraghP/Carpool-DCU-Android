@@ -4,9 +4,9 @@ import Collapsible from "react-native-collapsible";
 import NumberOfSeatsSelector from "./NumberOfSeatsSelector";
 import DepartureTimePicker from "./DepartureTimePicker";
 import {useAppDispatch, useAppSelector} from "../../hooks";
-import {useEffect, useState} from "react";
-import {showNumberOfSeatsAndTimePicker, showWaypoints} from "../../reducers/collapsibles-reducer";
+import {showNumberOfSeatsAndTimePicker} from "../../reducers/collapsibles-reducer";
 
+// Component for the Collapsible with departure time and seats selector.
 function NumOfSeatsAndDepartureTimeCollapsible() {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.user);
