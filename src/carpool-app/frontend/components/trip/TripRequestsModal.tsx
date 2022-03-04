@@ -77,7 +77,10 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
             }
             else {
                 console.log(res.error);
+                setShowRequestsModalSpinner(false);
             }
+        }).catch(() => {
+            setShowRequestsModalSpinner(false);
         })
 
     }
@@ -150,12 +153,11 @@ function TripRequestsModal({firebaseTripRequests, previousTripID, setPreviousTri
                                                              </Button>
                                                          </HStack>
                                                      </VStack>
-                                                     <VStack maxWidth={widthPercentageToDP(50)}>
+                                                     <VStack maxWidth={widthPercentageToDP(45)}>
                                                          <Heading size={"md"}>From</Heading>
                                                          <Text>{firebaseTripRequests[key].startLocation.name} </Text>
                                                          <Heading size={"md"} mt={3}>To</Heading>
                                                          <Text>{firebaseTripRequests[key].destination.name}</Text>
-
                                                      </VStack>
 
                                                  </HStack>

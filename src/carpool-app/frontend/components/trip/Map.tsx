@@ -9,7 +9,7 @@ import {GOOGLE_API_KEY} from "@env";
 // @ts-ignore
 import getDirections from "react-native-google-maps-directions";
 import MapMarkers from "./MapMarkers";
-import {heightPercentageToDP} from "react-native-responsive-screen";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 
 // Map component shows map with route and markers on Trip Screen
 function Map() {
@@ -18,7 +18,6 @@ function Map() {
     const trips = useAppSelector(state => state.trips);
     const mapRef = useRef(null);
     const [isRouteTapped, setIsRouteTapped] = useState(false);
-    const collapsibles = useAppSelector(state => state.collapsibles);
 
     // used to zoom out/in on Map to show all markers
     const onMapReadyHandler = () => {
@@ -28,7 +27,7 @@ function Map() {
                 if (trips.locations.startingLocation.info.isEntered || trips.locations.destLocation.info.isEntered) {
                     mapRef.current.fitToSuppliedMarkers(markers, {animated: true});
                 }
-            }, 1000)
+            }, 500)
         }
     }
 
@@ -115,8 +114,11 @@ function Map() {
     }
 
     useEffect(() => {
-        onMapReadyHandler();
-    }, [trips.locations])
+        // prevent re-animating map unnecessarily
+        if (!trips.locations.startingLocation.info.isEntered && trips.locations.destLocation.info.isEntered) {
+                onMapReadyHandler();
+        }
+    }, [trips.locations.startingLocation, trips.locations.destLocation])
 
     return (
           // Map
@@ -130,6 +132,8 @@ function Map() {
                   longitudeDelta: trips.locations.startingLocation.info.isEntered ? 0.01 : 4.50,
               }}
               onMapReady={onMapReadyHandler}
+              minZoomLevel={(!trips.locations.startingLocation.info.isEntered && !trips.locations.destLocation.info.isEntered) ? undefined : 3}
+              maxZoomLevel={15}
           >
 
               {/* If start and destination are in trips, shows route between them on map */}
@@ -144,7 +148,7 @@ function Map() {
                           : undefined)
                       }
                       optimizeWaypoints={true}
-                      onReady={data => {distanceDurationHandler(data)}}
+                      onReady={data => {distanceDurationHandler(data); onMapReadyHandler()}}
                       apikey={GOOGLE_API_KEY}
                       strokeWidth={3}
                       strokeColor={isRouteTapped ? "red" : "black"}

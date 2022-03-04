@@ -15,13 +15,14 @@ import {updateRole, setLocations} from "./reducers/trips-reducer";
 import PassengerScreen from "./screens/Passenger";
 import DriverScreen from "./screens/Driver";
 import TripAlertModal from "./components/trip/TripAlertModal";
-import {showWaypoints} from "./reducers/collapsibles-reducer";
+import {showNumberOfSeatsAndTimePicker, showWaypoints} from "./reducers/collapsibles-reducer";
 
 const Tab = createBottomTabNavigator();
 
 export default function Index() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(state => state.user);
+  const trips = useAppSelector(state => state.trips);
   const [hideAuthTabs, setHideAuthTabs] = useState(false);
   const [tabAlert, setTabAlert] = useState(false);
   const [showStatusAvailableFromDriverAlert, setShowStatusAvailableFromDriverAlert] = useState(false);
@@ -93,6 +94,18 @@ export default function Index() {
                         options={
                           {tabBarIcon: () => {return <Ionicons name="home" size={25} color={"grey"}/>;}, headerShown: false}
                         }
+                        listeners={({navigation, route}) => ({
+                            tabPress: (e) => {
+                              e.preventDefault();
+                              let routeName = navigationRef.current?.getCurrentRoute().name;
+                              if (routeName === "Driver") {
+                                dispatch(updateRole("driver"))
+                                dispatch(showWaypoints(false));
+                                dispatch(showNumberOfSeatsAndTimePicker(false));
+                              }
+                              navigation.navigate("Home")
+                            }
+                        })}
                     />
                 }
 
@@ -104,10 +117,9 @@ export default function Index() {
                     listeners={ ({navigation, route }) => ({
                       tabPress: (e) => {
                         e.preventDefault();
-                        dispatch(updateRole("passenger"))
+
                         let routeName = navigationRef.current?.getCurrentRoute().name;
                         let routeCondition = routeName === "Driver";
-
 
                         if (user.status === "available") {
                           if (routeCondition) {
@@ -117,7 +129,9 @@ export default function Index() {
                               setShowStatusAvailableFromDriverAlert(true);
                           }
                           else {
-                            dispatch(updateRole("passenger"));
+                            if (trips.role === "") {
+                              dispatch(updateRole("passenger"));
+                            }
                             navigation.navigate("Passenger")
                           }
                         }
@@ -147,7 +161,6 @@ export default function Index() {
                     listeners={({navigation, route}) => ({
                       tabPress: (e) => {
                         e.preventDefault();
-                        dispatch(updateRole("driver"))
                         let routeName = navigationRef.current?.getCurrentRoute().name;
                         let routeCondition = routeName === "Passenger";
 
@@ -159,7 +172,9 @@ export default function Index() {
                               setShowStatusAvailableFromPassengerAlert(true);
                           }
                           else {
-                            dispatch(updateRole("passenger"));
+                            if (trips.role === "") {
+                              dispatch(updateRole("passenger"));
+                            }
                             navigation.navigate("Passenger")
                           }
                         }
@@ -194,6 +209,19 @@ export default function Index() {
                   options={
                     {headerShown: false, tabBarIcon: () => {return <Ionicons name="settings-outline" size={25} color={"grey"}/>;}}
                   }
+                  listeners={({navigation, route}) => ({
+                      tabPress: (e) => {
+                        e.preventDefault();
+                        let routeName = navigationRef.current?.getCurrentRoute().name;
+                        if (routeName === "Driver") {
+                          dispatch(updateRole("driver"))
+                          dispatch(showWaypoints(false));
+                          dispatch(showNumberOfSeatsAndTimePicker(false));
+                        }
+                        navigation.navigate("Settings")
+
+                      }
+                  })}
                 />
               </>
               :
@@ -201,7 +229,7 @@ export default function Index() {
                 <Tab.Screen name="Login" component={LoginScreen}
                   options={
                     {tabBarIcon: () => {return <Ionicons name="log-in-outline" size={25} color={"grey"}/>;}}
-                   }
+                  }
                 />
                 <Tab.Screen name="Register" component={RegisterScreen}
                   options={

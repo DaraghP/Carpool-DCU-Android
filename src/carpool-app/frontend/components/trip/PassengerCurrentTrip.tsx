@@ -7,6 +7,7 @@ import {getDatabase, ref, remove, update} from "firebase/database";
 import {useEffect, useState} from "react";
 import TripAlertModal from "./TripAlertModal";
 import TripPassengers from "./TripPassengers";
+import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive-screen";
 
 // Component to show information about the passengers current trip.
 // Used in TripScreen but only shows if user is a passenger in an active trip.
@@ -108,15 +109,14 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
     // only shows passenger trip information, if passenger is currently in a trip.
     return (
         (trips.role === "passenger" && user.tripRequestStatus === "" && user.tripStatus === "in_trip" && !filteredTrips.has(trips.id) ?
-            <View style={{backgroundColor: "grey"}}>
-              <Box mb={2}>
-
+            <View style={{backgroundColor: "grey"}} width={widthPercentageToDP(100)}>
+              <Box mb={2} width={widthPercentageToDP(100)}>
                 <Heading color="muted.100" marginX={0} padding={3}  size="lg" bg="muted.800">{trips.driverName}'s Trip</Heading>
 
-                <Box marginX={3} mt={2} mb={2}>
+                <Box marginX={3} mt={2} mb={2} width={widthPercentageToDP(80)}>
                     <HStack>
                         <Text color="white" bold fontSize="lg">From: {" "}</Text>
-                        <Text color="white" fontSize="lg">{trips.passengerStartLoc in dcuCampuses ? dcuCampuses[trips.passengerStartLoc] : trips.passengerStartLoc}</Text>
+                        <Text color="white" fontSize="lg">{trips.passengerStartLoc in dcuCampuses ? dcuCampuses[trips.passengerStartLoc]  : trips.passengerStartLoc}</Text>
                     </HStack>
                     <HStack>
                         <Text color="white" bold fontSize="lg">To: {"      "}</Text>
@@ -159,7 +159,9 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                       <Text color="white">Driver's Phone No:{"   "}</Text>
                       <Text color="white" bold selectable={true}>{trips.driverPhone}</Text>
                   </HStack>
-                <Text color="white">Driver's Car:{"    "}{trips.car["colour"]} {trips.car["make"]} {trips.car["model"]}</Text>
+                  {trips.car &&
+                       <Text color="white">Driver's Car:{"    "}{trips.car["colour"]} {trips.car["make"]} {trips.car["model"]}</Text>
+                  }
               </Box>
 
                 {/* Only shows leave trip button if trip has not departed yet */}
@@ -171,7 +173,11 @@ function PassengerCurrentTrip({isTripToDCU, filteredTrips, setIsTripToDCU, setCa
                         Leave Trip
                     </Button>
                     :
-                    <Text>Driver has departed</Text>
+                    <Box bg="green.600" maxHeight={heightPercentageToDP(7)} width={widthPercentageToDP(100)} p={4}>
+                        <Text color="white">
+                            Driver departed
+                        </Text>
+                    </Box>
                 }
 
                 {/* Modal pops up when passenger presses leave trip*/}

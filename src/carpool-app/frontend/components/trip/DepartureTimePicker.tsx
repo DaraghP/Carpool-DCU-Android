@@ -75,7 +75,7 @@ function DepartureTimePicker() {
                       console.log("Time selected:", time.toString());
                       let msecSelected = Date.parse(time.toString())
                       let msecNow = Date.parse(new Date().toString())
-                      console.log((msecSelected - msecNow) >= 0)
+
                       if ((msecSelected - msecNow) >= 0) {
                           dispatch(setTimeOfDeparture(time.toString()));
                           setTimePickerVisibility(false);

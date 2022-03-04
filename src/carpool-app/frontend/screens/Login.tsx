@@ -11,7 +11,6 @@ import {heightPercentageToDP, widthPercentageToDP} from "react-native-responsive
 // Login Screen
 function LoginScreen({ navigation }) {
   const dispatch = useAppDispatch();
-  const user = useAppSelector(state => state.user);
   const trips = useAppSelector(state=> state.trips);
   const backendURL = useAppSelector(state => state.globals.backendURL);
   const usernameInput = useRef("");

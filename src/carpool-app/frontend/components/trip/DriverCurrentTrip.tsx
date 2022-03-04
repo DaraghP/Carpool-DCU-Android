@@ -6,6 +6,7 @@ import {updateStatus} from "../../reducers/user-reducer";
 import {useState} from "react";
 import TripAlertModal from "./TripAlertModal";
 import TripPassengers from "./TripPassengers";
+import {widthPercentageToDP} from "react-native-responsive-screen";
 
 // Driver Current Trip component
 // Displays information to driver about their trip
@@ -70,11 +71,11 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
     }
 
     return (
-             <View style={{backgroundColor: "grey"}}>
-                <Box mb={1}>
+             <View style={{backgroundColor: "grey"}} width={widthPercentageToDP(100)}>
+                <Box mb={1} width={widthPercentageToDP(100)}>
                     <Heading color="muted.100" marginX={0} padding={2}  size="lg" bg="muted.800">
                         Your Current Trip</Heading>
-                    <Box bg="red" style={{elevation: 999}} marginX={3} mt={1} mb={2}>
+                    <Box bg="red" style={{elevation: 999}} marginX={3} mt={1} mb={2} width={widthPercentageToDP(80)}>
                         <HStack>
                             <Text color="white" bold fontSize="lg">From: {" "}</Text>
                             <Text color="white" fontSize="lg">{trips.locations.startingLocation.marker.description in dcuCampuses ? dcuCampuses[trips.locations.startingLocation.marker.description] : trips.locations.startingLocation.marker.description}</Text>
@@ -85,7 +86,7 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                         </HStack>
                     </Box>
 
-                    <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}}/>
+                    <View style={{borderBottomColor: 'white', borderBottomWidth: 0.5}} width={widthPercentageToDP(100)}/>
 
                     <Box mt={2} bg="blue" marginX={3} mb={2}>
                         <HStack space={"30%"}>
@@ -126,8 +127,6 @@ function DriverCurrentTrip({isTripDeparted, setIsTripToDCU, setCampusSelected}) 
                             <Button shadow={1} colorScheme="red" onPress={() => {setIsCancelTripPressed(true)}}>Cancel Trip</Button>
 
                             <Button shadow={1} onPress={() => {
-
-
                                 update(ref(db, `/trips/${trips.id}`), {[`/status`]: "departed"})
                                 get(ref(db, `/tripRequests/${trips.id}`)).then((snapshot) => {
                                 if (snapshot.val() !== null) {
